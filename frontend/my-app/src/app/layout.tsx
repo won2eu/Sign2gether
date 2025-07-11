@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Header from "@/components/header"; //상단 바 import
+import FileDropZone from "@/components/DropFileZone"; //  파일 드랍 영역 import 
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,6 +29,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {/* 상단 바 컴포넌트 추가  */}
+        <Header /> 
+        {/* 파일 드랍 영역 컴포넌트 추가  */}
+        <FileDropZone />
         {children}
       </body>
     </html>
