@@ -1,11 +1,11 @@
 "use client"
-
+// 파일 선택 하거나 파일 드랍하는 컴포넌트
 import type React from "react"
-
-import { useState, useCallback } from "react"
-import { Upload, File, X } from "lucide-react"
+import { useState, useCallback } from "react" 
+import { Upload, File, X } from "lucide-react" // 최신 아이콘 라이브러리 
 import { Button } from "@/components/ui/button"
 
+// 업로드할 파일 모델 객체
 interface UploadedFile {
   name: string
   size: number
@@ -15,18 +15,22 @@ interface UploadedFile {
 
 export default function FileDropZone() {
   const [isDragOver, setIsDragOver] = useState(false)
+  // UploadedFile[]는 UploadedFile 객체를 담을 리스트 선언이고 초기에는 빈 배열로 세팅
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
 
+  //드래그 오버 시 setIsDragOver = true
   const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
+    e.preventDefault() // 브라우저가 자동으로 이벤트를 실행하지 않도록
     setIsDragOver(true)
   }, [])
 
+  //드래그 오버 시 setIsDragOver = false
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setIsDragOver(false)
   }, [])
 
+  // 드래그앤드랍을 이용한 파일 업로드
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setIsDragOver(false)
@@ -38,10 +42,11 @@ export default function FileDropZone() {
       type: file.type,
       file: file,
     }))
-
+    // prev는 현재 상태 값
     setUploadedFiles((prev) => [...prev, ...newFiles])
   }, [])
 
+  //파일선택 버튼을 이용한 파일 업로드
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     const newFiles: UploadedFile[] = files.map((file) => ({
@@ -54,10 +59,12 @@ export default function FileDropZone() {
     setUploadedFiles((prev) => [...prev, ...newFiles])
   }, [])
 
+  // 파일 삭제
   const removeFile = useCallback((index: number) => {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index))
   }, [])
-
+  
+  // 파일 크기 계산
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes"
     const k = 1024
@@ -70,9 +77,12 @@ export default function FileDropZone() {
     <div className="w-full max-w-4xl mx-auto p-6">
       {/* Drop Zone */}
       <div
+      // 커서 드래그 오버 설정 (HTML 이벤트 핸들러 속성)
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+
+        // 드래그 오버 시 css 속성 변경
         className={`
           border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200
           ${isDragOver ? "border-blue-500 bg-blue-50 scale-105" : "border-gray-300 hover:border-gray-400"}
@@ -94,16 +104,16 @@ export default function FileDropZone() {
           </div>
 
           <input type="file" multiple onChange={handleFileInput} className="sr-only" id="file-input" />
-          <Button variant="outline" className="cursor-pointer bg-transparent" asChild>
-            <label htmlFor="file-input">
+          <label htmlFor="file-input">
+            <Button variant="outline" className="cursor-pointer bg-transparent">
               파일 선택
-            </label>
-          </Button>
+            </Button>
+          </label>
           <p className="text-sm text-gray-500 mt-4">PDF, DOC, DOCX, JPG, PNG 파일을 지원합니다</p>
         </div>
       </div>
 
-      {/* Uploaded Files List */}
+      {/*업로드 된 파일 리스트 표시*/}
       {uploadedFiles.length > 0 && (
         <div className="mt-6">
           <h4 className="text-lg font-semibold text-gray-900 mb-4">업로드된 파일 ({uploadedFiles.length})</h4>
@@ -130,7 +140,7 @@ export default function FileDropZone() {
               </div>
             ))}
           </div>
-
+            {/* 파일 업로드 후 백엔드 파일 전송 및 업로드한 모든 파일 삭제 */}
           <div className="mt-4 flex space-x-3">
             <Button className="bg-blue-600 hover:bg-blue-700">모든 파일 업로드</Button>
             <Button variant="outline" onClick={() => setUploadedFiles([])}>
