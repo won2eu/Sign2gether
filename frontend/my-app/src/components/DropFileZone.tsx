@@ -70,16 +70,6 @@ export default function FileDropZone() {
     })
   }, [])
 
-
-
-
-
-
-
-
-
-
-
   // 파일 타입 판별 및 상태 저장
   const handleFile = useCallback((file: File) => {
     console.log('업로드 파일:', file, '타입:', file.type);
