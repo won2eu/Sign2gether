@@ -21,6 +21,34 @@ export default function Header() {
   // 서명 이미지 데이터 (base64)
   const [signatureData, setSignatureData] = React.useState<string | null>(null)
 
+  // 서명 모달 열기 이벤트 리스너
+  React.useEffect(() => {
+    const handleOpenSignatureModal = () => {
+      setSignatureOpen(true)
+    }
+
+    window.addEventListener('openSignatureModal', handleOpenSignatureModal)
+    
+    return () => {
+      window.removeEventListener('openSignatureModal', handleOpenSignatureModal)
+    }
+  }, [])
+
+  // 서명 추가 이벤트 리스너
+  React.useEffect(() => {
+    const handleAddSignature = (event: CustomEvent) => {
+      setSignatureData(event.detail)
+      // 서명이 추가되면 모달 닫기
+      setSignatureOpen(false)
+    }
+
+    window.addEventListener('addSignature', handleAddSignature as EventListener)
+    
+    return () => {
+      window.removeEventListener('addSignature', handleAddSignature as EventListener)
+    }
+  }, [])
+
   return (
     <div className="w-full bg-white">
       {/* Main Navigation Bar */}
@@ -53,15 +81,15 @@ export default function Header() {
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>로그인</DialogTitle>
-                <DialogDescription>구글 계정으로 간편하게 로그인하세요.</DialogDescription>
+                <DialogDescription>
+                  계정에 로그인하여 서명을 저장하고 관리하세요.
+                </DialogDescription>
               </DialogHeader>
               <LoginForm />
             </DialogContent>
           </Dialog>
         </nav>
       </header>
-
-
 
       <div className="flex justify-end px-6 py-3 space-x-2">
         {/* 사인 버튼 */}
@@ -85,15 +113,14 @@ export default function Header() {
           <span>Download</span>
         </Button>
       </div>
-      {/* SignatureModal 연동 */}
+
+      {/* 서명 모달 */}
       <SignatureModal
         open={signatureOpen}
         onClose={() => setSignatureOpen(false)}
         onSave={(dataUrl) => {
-          setSignatureData(dataUrl)
-          setSignatureOpen(false)
-          // 우선 콘솔에 출력, 추후 DropFileZone 등과 연동 가능
-          console.log("서명 이미지(base64):", dataUrl)
+          // 서명 데이터를 전역 이벤트로 전달
+          window.dispatchEvent(new CustomEvent('addSignature', { detail: dataUrl }))
         }}
       />
       {/* (선택) 서명 이미지 미리보기 */}

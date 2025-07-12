@@ -14,6 +14,31 @@ const COLORS = [
   { name: "red", code: "#ef4444" },
 ]
 
+// 흰색 배경을 투명하게 만드는 함수
+function removeWhiteBgFromDataUrl(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        // 밝은 픽셀(흰색 계열)만 투명하게
+        if (data[i] > 220 && data[i+1] > 220 && data[i+2] > 220) {
+          data[i+3] = 0; // alpha = 0 (완전 투명)
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.src = dataUrl;
+  });
+}
+
 export default function SignatureModal({ open, onClose, onSave }: SignatureModalProps) {
   const sigCanvasRef = useRef<SignatureCanvas>(null)
   const [penColor, setPenColor] = useState(COLORS[0].code)
@@ -59,9 +84,11 @@ export default function SignatureModal({ open, onClose, onSave }: SignatureModal
           <Button
             size="sm"
             className="bg-blue-600 text-white hover:bg-blue-700"
-            onClick={() => {
+            onClick={async () => {
               if (sigCanvasRef.current && !sigCanvasRef.current.isEmpty()) {
-                onSave(sigCanvasRef.current.getTrimmedCanvas().toDataURL("image/png"))
+                const rawDataUrl = sigCanvasRef.current.getTrimmedCanvas().toDataURL("image/png");
+                const transparentDataUrl = await removeWhiteBgFromDataUrl(rawDataUrl);
+                onSave(transparentDataUrl);
               }
             }}
           >
