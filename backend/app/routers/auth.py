@@ -1,14 +1,15 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 import os
 from dotenv import load_dotenv
 import requests
 from app.services.user import create_or_update_user, get_user_by_id
+from app.dependencies.database import get_db
 from jose import JWTError, jwt
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
 from fastapi import HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
 
 load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
@@ -30,9 +31,10 @@ def verify_token(token: str):
     except JWTError:
         return None
 
-
-
-async def get_current_user_from_cookie(request: Request):
+async def get_current_user_from_cookie(
+    request: Request,
+    db: AsyncSession = Depends(get_db)  # dependency injection 추가
+):
     """쿠키에서 JWT 토큰을 읽어 DB에서 사용자 정보를 반환하는 함수"""
     token = request.cookies.get("access_token")
     if not token:
@@ -56,8 +58,8 @@ async def get_current_user_from_cookie(request: Request):
             detail="Invalid token payload"
         )
     
-    # DB에서 사용자 정보 조회
-    user = await get_user_by_id(int(user_id))
+    # DB에서 사용자 정보 조회 (dependency injection 사용)
+    user = await get_user_by_id(db, int(user_id))
     
     if not user:
         raise HTTPException(
@@ -72,8 +74,6 @@ async def get_current_user_from_cookie(request: Request):
         "picture": user.picture,
         "created_at": user.created_at.isoformat() if user.created_at else None
     }
-
-
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     if not SECRET_KEY:
@@ -103,7 +103,10 @@ def login_with_google():
     return RedirectResponse(url=google_auth_url)
 
 @router.get("/google/callback")
-async def google_auth_callback(code: str):
+async def google_auth_callback(
+    code: str,
+    db: AsyncSession = Depends(get_db)  # dependency injection 추가
+):
     token_url = "https://oauth2.googleapis.com/token"
     data = {
         "code": code,
@@ -120,8 +123,8 @@ async def google_auth_callback(code: str):
         headers={"Authorization": f"Bearer {access_token}"}
     ).json()
 
-    # DB에 사용자 정보 저장
-    user = await create_or_update_user(user_info)
+    # DB에 사용자 정보 저장 (dependency injection 사용)
+    user = await create_or_update_user(db, user_info)
 
     # JWT 토큰 생성
     access_token_expires = timedelta(minutes=30)
@@ -149,7 +152,9 @@ async def google_auth_callback(code: str):
     return response
 
 @router.get("/me")
-async def get_current_user_info(current_user = Depends(get_current_user_from_cookie)):
+async def get_current_user_info(
+    current_user = Depends(get_current_user_from_cookie)
+):
     """현재 로그인한 사용자 정보 조회 (쿠키 기반 JWT)"""
     
     return {

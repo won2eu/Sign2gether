@@ -1,18 +1,24 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
+from ..db import Base
 
-Base = declarative_base()
 
 class Document(Base):
     __tablename__ = "documents"
     
     id = Column(Integer, primary_key=True, index=True)
     uploader_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    original_filename = Column(String(255))
+    original_filename = Column(String(255), nullable=False)
     stored_filename = Column(String(255), unique=True, nullable=False)
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    file_path = Column(Text, nullable=False)  # 파일 저장 경로
+    file_size = Column(Integer)  # 파일 크기 (bytes)
+    mime_type = Column(String(100))  # MIME 타입
+    file_url = Column(Text, nullable=False)   # 파일 접근 URL
+    uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
-    # 관계 설정 (선택사항)
+    # 관계 설정 활성화
     uploader = relationship("User", back_populates="documents")
+    
+    def __repr__(self):
+        return f"<Document(id={self.id}, filename='{self.original_filename}', uploader_id={self.uploader_id})>"

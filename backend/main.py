@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from app.routers import auth, upload
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-
+from app.db import init_db
 app = FastAPI()
 
 app.add_middleware(
@@ -18,3 +18,8 @@ app.add_middleware(
 app.mount("/resources", StaticFiles(directory="resources"), name="resources")
 app.include_router(auth.router)
 app.include_router(upload.router)
+
+@app.on_event("startup")
+async def startup_event():
+    await init_db()
+    print("Database initialized successfully!")
