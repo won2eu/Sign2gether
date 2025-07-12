@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
+from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
@@ -12,3 +13,5 @@ class User(Base):
     google_id = Column(String, unique=True) 
     picture = Column(String)
     created_at = Column(DateTime, default=datetime.now)
+
+    documents = relationship("Document", back_populates="uploader", cascade="all, delete-orphan")

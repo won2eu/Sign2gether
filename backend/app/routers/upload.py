@@ -44,6 +44,7 @@ async def upload_pdf(
         with open(file_path, "wb") as buffer:
             content = await file.read()
             buffer.write(content)
+
         
         # 응답 데이터
         file_info = {
