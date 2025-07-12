@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
 import os
 from dotenv import load_dotenv
 import requests
-from app.services.user import create_or_update_user
+from app.services.user import create_or_update_user, get_user_by_id
 from jose import JWTError, jwt
 from datetime import datetime,timedelta
 from fastapi import HTTPException, status
@@ -30,16 +30,50 @@ def verify_token(token: str):
     except JWTError:
         return None
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    token = credentials.credentials
+
+
+async def get_current_user_from_cookie(request: Request):
+    """쿠키에서 JWT 토큰을 읽어 DB에서 사용자 정보를 반환하는 함수"""
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+    
     payload = verify_token(token)
     if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Invalid token"
         )
-    return payload
+    
+    # JWT에서 user_id 추출
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload"
+        )
+    
+    # DB에서 사용자 정보 조회
+    user = await get_user_by_id(int(user_id))
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+    
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "picture": user.picture,
+        "created_at": user.created_at.isoformat() if user.created_at else None
+    }
+
+
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     if not SECRET_KEY:
@@ -96,17 +130,38 @@ async def google_auth_callback(code: str):
         "email": user.email,
         "name": user.name
     }
-    access_token = create_access_token(
+    jwt_token = create_access_token(
         data=token_data, 
         expires_delta=access_token_expires
     )
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "picture": user.picture
-        }
-    }
+
+    # JWT 토큰을 쿠키로 전달 (더 안전함)
+    response = RedirectResponse(url="http://localhost:3000/")
+    response.set_cookie(
+        key="access_token",
+        value=jwt_token,
+        httponly=True,  # JavaScript에서 접근 불가
+        secure=False,   # 개발환경에서는 False, 프로덕션에서는 True
+        samesite="lax",
+        max_age=1800,    # 30분
+        domain="localhost"
+    )
+    return response
+
+@router.get("/me")
+async def get_current_user_info(current_user = Depends(get_current_user_from_cookie)):
+    """현재 로그인한 사용자 정보 조회 (쿠키 기반 JWT)"""
+    
+    return current_user
+
+@router.get("/logout")
+async def logout():
+    """로그아웃 - 쿠키 삭제"""
+    response = RedirectResponse(url="http://localhost:3000/")
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        secure=False,
+        samesite="lax"
+    )
+    return response

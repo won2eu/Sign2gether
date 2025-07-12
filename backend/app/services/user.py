@@ -2,12 +2,6 @@ from app.models.user import User
 from app.db import AsyncSessionLocal
 from sqlalchemy import select
 
-async def get_user_by_email(email: str):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(User).where(User.email == email)
-        )
-        return result.scalar_one_or_none()
 
 async def get_user_by_google_id(google_id: str):
     async with AsyncSessionLocal() as session:
@@ -16,10 +10,17 @@ async def get_user_by_google_id(google_id: str):
         )
         return result.scalar_one_or_none()
 
+async def get_user_by_id(user_id: int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(User).where(User.id == user_id)
+        )
+        return result.scalar_one_or_none()
+
 async def create_or_update_user(userinfo: dict):
     async with AsyncSessionLocal() as session:
         # 이메일로 기존 사용자 확인
-        existing_user = await get_user_by_email(userinfo["email"])
+        existing_user = await get_user_by_google_id(userinfo["id"])
         
         if existing_user:
             # 기존 사용자 정보 업데이트
