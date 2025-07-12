@@ -152,7 +152,12 @@ async def google_auth_callback(code: str):
 async def get_current_user_info(current_user = Depends(get_current_user_from_cookie)):
     """현재 로그인한 사용자 정보 조회 (쿠키 기반 JWT)"""
     
-    return current_user
+    return {
+        "email": current_user["email"],
+        "name": current_user["name"],
+        "picture": current_user["picture"],
+        "created_at": current_user["created_at"]
+    }
 
 @router.get("/logout")
 async def logout():
