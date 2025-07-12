@@ -1,10 +1,11 @@
 "use client"
 
 // DropFileZone: 이미지, PDF 파일만 업로드/미리보기 지원, PDF는 페이지 넘기기 기능 포함
+// 확대/축소 및 패닝 기능 추가
 
 import type React from "react"
 import { useState, useRef, useCallback, useEffect } from "react"
-import { Upload } from "lucide-react"
+import { Upload, ZoomIn, ZoomOut, RotateCcw, Move } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 // 업로드할 파일 모델 객체 타입
@@ -14,6 +15,13 @@ interface UploadedFile {
   type: string
   file: File
 }
+
+// 줌 상태 타입
+interface ZoomState {
+  scale: number
+}
+
+
 
 export default function FileDropZone() {
   // 드래그 오버 상태
@@ -33,6 +41,44 @@ export default function FileDropZone() {
   const [pdfPageCount, setPdfPageCount] = useState(1)
   // pdf.js 문서 객체 저장용 ref
   const pdfDocRef = useRef<any>(null)
+  
+  // 줌 상태
+  const [zoomState, setZoomState] = useState<ZoomState>({
+    scale: 1
+  })
+  
+  // PDF 렌더링 중복 방지를 위한 ref
+  const isRenderingRef = useRef(false)
+  
+  // 컨테이너 ref (패닝을 위한)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // 줌 인/아웃 함수 (중심점 기준)
+  const handleZoomWithCenter = useCallback((delta: number, centerX: number, centerY: number) => {
+    setZoomState(prev => {
+      const newScale = Math.max(1.0, Math.min(5, prev.scale + delta))
+      console.log('줌 변경:', prev.scale, '+', delta, '=', newScale)
+      return { scale: newScale }
+    })
+  }, [])
+
+  // 기존 줌 함수 (버튼용)
+  const handleZoom = useCallback((delta: number) => {
+    setZoomState(prev => {
+      const newScale = Math.max(1.0, Math.min(5, prev.scale + delta))
+      return { ...prev, scale: newScale }
+    })
+  }, [])
+
+
+
+
+
+
+
+
+
+
 
   // 파일 타입 판별 및 상태 저장
   const handleFile = useCallback((file: File) => {
@@ -58,6 +104,8 @@ export default function FileDropZone() {
       type: file.type,
       file: file,
     })
+    // 파일 변경 시 줌 상태 리셋
+    setZoomState({ scale: 1 })
   }, [])
 
   // 드래그 오버 핸들러
@@ -93,22 +141,40 @@ export default function FileDropZone() {
   // 이미지 미리보기 (canvas에 그림)
   useEffect(() => {
     if (previewType === "image" && uploadedFile && canvasRef.current) {
-      const ctx = canvasRef.current.getContext("2d")
-      if (!ctx) return
       const img = new window.Image()
       setLoading(true)
       img.onload = () => {
-        canvasRef.current!.width = img.width
-        canvasRef.current!.height = img.height
-        ctx.clearRect(0, 0, img.width, img.height)
-        ctx.drawImage(img, 0, 0)
+        // 고정 캔버스 크기
+        const canvasWidth = 600
+        const canvasHeight = 800
+        canvasRef.current!.width = canvasWidth
+        canvasRef.current!.height = canvasHeight
+
+        // 이미지 비율 계산 (확대/축소 반영)
+        const baseScale = Math.min(canvasWidth / img.width, canvasHeight / img.height, 1)
+        const scale = baseScale * zoomState.scale
+        const drawWidth = img.width * scale
+        const drawHeight = img.height * scale
+        const offsetX = (canvasWidth - drawWidth) / 2
+        const offsetY = (canvasHeight - drawHeight) / 2
+
+        const ctx = canvasRef.current!.getContext("2d")
+        if (!ctx) return setLoading(false)
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight)
         setLoading(false)
       }
       img.onerror = () => setLoading(false)
       img.src = URL.createObjectURL(uploadedFile.file)
-      return () => URL.revokeObjectURL(img.src)
-    }
-  }, [previewType, uploadedFile])
+              return () => URL.revokeObjectURL(img.src)
+      }
+    }, [
+      previewType,
+      uploadedFile ? uploadedFile.name : '',
+      uploadedFile ? uploadedFile.size : 0,
+      uploadedFile ? uploadedFile.type : '',
+      zoomState.scale
+    ])
 
   // PDF 파일 업로드 시 문서 객체 생성 및 전체 페이지 수 저장
   useEffect(() => {
@@ -118,6 +184,8 @@ export default function FileDropZone() {
       canvasRef.current &&
       typeof window !== "undefined"
     ) {
+      if (isRenderingRef.current) return;
+      isRenderingRef.current = true;
       setLoading(true);
       const fileReader = new FileReader();
       fileReader.onload = async function () {
@@ -136,25 +204,41 @@ export default function FileDropZone() {
           // 첫 페이지 강제 렌더링
           if (canvasRef.current) {
             const page = await pdf.getPage(1);
-            const scale = Math.min(600 / page.getViewport({ scale: 1 }).width, 1.5);
+            const canvasWidth = 600;
+            const canvasHeight = 800;
+            const originalViewport = page.getViewport({ scale: 1 });
+            const baseScale = Math.min(canvasWidth / originalViewport.width, canvasHeight / originalViewport.height, 1.5)
+            const scale = baseScale * zoomState.scale;
             const viewport = page.getViewport({ scale });
+            const offsetX = (canvasWidth - viewport.width) / 2;
+            const offsetY = (canvasHeight - viewport.height) / 2;
             const canvas = canvasRef.current;
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
             const ctx = canvas.getContext("2d");
+            if (!ctx) { setLoading(false); isRenderingRef.current = false; return; }
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
             await page.render({ canvasContext: ctx, viewport }).promise;
+            ctx.restore();
           }
-          
         } catch (e) {
           console.error("PDF 미리보기 에러:", e);
           setPreviewType("unsupported");
         }
         setLoading(false);
+        isRenderingRef.current = false;
       };
       fileReader.readAsArrayBuffer(uploadedFile.file);
     }
-    // eslint-disable-next-line
-  }, [previewType, uploadedFile]);
+  }, [
+    previewType,
+    uploadedFile ? uploadedFile.name : '',
+    uploadedFile ? uploadedFile.size : 0,
+    uploadedFile ? uploadedFile.type : '',
+    zoomState.scale
+  ])
 
   // PDF 페이지가 바뀔 때마다 해당 페이지를 canvas에 렌더링
   useEffect(() => {
@@ -166,29 +250,46 @@ export default function FileDropZone() {
         pdfDocRef.current &&
         typeof window !== "undefined"
       ) {
+        if (isRenderingRef.current) return;
+        isRenderingRef.current = true;
         setLoading(true);
         try {
-          // 현재 페이지 객체 가져오기
           const page = await pdfDocRef.current.getPage(currentPage);
-          // 최대 가로 600px로 리사이즈
-          const scale = Math.min(600 / page.getViewport({ scale: 1 }).width, 1.5);
+          const canvasWidth = 600;
+          const canvasHeight = 800;
+          const originalViewport = page.getViewport({ scale: 1 });
+          const baseScale = Math.min(canvasWidth / originalViewport.width, canvasHeight / originalViewport.height, 1.5)
+          const scale = baseScale * zoomState.scale;
           const viewport = page.getViewport({ scale });
+          const offsetX = (canvasWidth - viewport.width) / 2;
+          const offsetY = (canvasHeight - viewport.height) / 2;
           const canvas = canvasRef.current;
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
+          canvas.width = canvasWidth;
+          canvas.height = canvasHeight;
           const ctx = canvas.getContext("2d");
-          // 페이지를 canvas에 렌더링
+          if (!ctx) { setLoading(false); isRenderingRef.current = false; return; }
+          ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+          ctx.save();   
+          ctx.translate(offsetX, offsetY);
           await page.render({ canvasContext: ctx, viewport }).promise;
+          ctx.restore();
         } catch (e) {
           console.error("PDF 페이지 렌더링 에러:", e);
           setPreviewType("unsupported");
         }
         setLoading(false);
+        isRenderingRef.current = false;
       }
     };
     renderPage();
-    // eslint-disable-next-line
-  }, [currentPage, previewType, uploadedFile]);
+  }, [
+    currentPage,
+    previewType,
+    uploadedFile ? uploadedFile.name : '',
+    uploadedFile ? uploadedFile.size : 0,
+    uploadedFile ? uploadedFile.type : '',
+    zoomState.scale
+  ])
 
   // 파일 제거 핸들러
   const removeFile = useCallback(() => {
@@ -198,6 +299,8 @@ export default function FileDropZone() {
     setCurrentPage(1)
     setPdfPageCount(1)
     pdfDocRef.current = null
+    isRenderingRef.current = false
+    setZoomState({ scale: 1 })
   }, [])
 
   return (
@@ -236,6 +339,7 @@ export default function FileDropZone() {
               </label>
             </Button>
             <p className="text-sm text-gray-500 mt-4">PDF, JPG, PNG 파일만 지원합니다</p>
+            <p className="text-xs text-gray-400 mt-2">업로드 후 버튼으로 확대/축소, 더블클릭으로 리셋</p>
             {errorMsg && <div className="text-red-500 mt-2">{errorMsg}</div>}
           </div>
         </div>
@@ -253,11 +357,79 @@ export default function FileDropZone() {
           </div>
           {loading && <div className="text-blue-600 mb-4">미리보기 준비 중...</div>}
           {/* 이미지 미리보기 */}
-          {previewType === "image" && <canvas ref={canvasRef} className="border rounded shadow" />}
+          {previewType === "image" && (
+            <div
+              ref={containerRef}
+              className="relative w-[600px] h-[800px] border rounded shadow overflow-hidden"
+            >
+              <canvas
+                ref={canvasRef}
+                className="absolute top-0 left-0 w-full h-full"
+                style={{}}
+              />
+                             <div className="absolute bottom-4 left-4 flex space-x-1 bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-lg">
+                 <Button variant="outline" size="sm" disabled={isRenderingRef.current} onClick={() => {
+                   if (containerRef.current && !isRenderingRef.current) {
+                     const rect = containerRef.current.getBoundingClientRect()
+                     handleZoomWithCenter(-0.1, rect.width / 2, rect.height / 2)
+                   }
+                 }}>
+                   <ZoomOut className="w-4 h-4" />
+                 </Button>
+                 <Button variant="outline" size="sm" disabled={isRenderingRef.current} onClick={() => {
+                   if (containerRef.current && !isRenderingRef.current) {
+                     const rect = containerRef.current.getBoundingClientRect()
+                     handleZoomWithCenter(0.1, rect.width / 2, rect.height / 2)
+                   }
+                 }}>
+                   <ZoomIn className="w-4 h-4" />
+                 </Button>
+                 <Button variant="outline" size="sm" disabled={isRenderingRef.current} onClick={() => setZoomState({ scale: 1 })}>
+                   <RotateCcw className="w-4 h-4" />
+                 </Button>
+                 <span className="text-sm text-gray-700 bg-white px-2 py-1 rounded border">
+                   {Math.round(zoomState.scale * 100)}%
+                 </span>
+               </div>
+            </div>
+          )}
           {/* PDF 미리보기 + 페이지 넘기기 */}
           {previewType === "pdf" && (
             <>
-              <canvas ref={canvasRef} className="border rounded shadow" style={{ maxWidth: 600, width: "100%", height: "auto" }} />
+              <div
+                ref={containerRef}
+                className="relative w-[600px] h-[800px] border rounded shadow overflow-hidden"
+              >
+                <canvas 
+                  ref={canvasRef} 
+                  className="absolute top-0 left-0 w-full h-full"
+                  style={{}}
+                />
+                <div className="absolute bottom-4 left-4 flex space-x-1 bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-lg">
+                  <Button variant="outline" size="sm" disabled={isRenderingRef.current} onClick={() => {
+                    if (containerRef.current && !isRenderingRef.current) {
+                      const rect = containerRef.current.getBoundingClientRect()
+                      handleZoomWithCenter(-0.1, rect.width / 2, rect.height / 2)
+                    }
+                  }}>
+                    <ZoomOut className="w-4 h-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" disabled={isRenderingRef.current} onClick={() => {
+                    if (containerRef.current && !isRenderingRef.current) {
+                      const rect = containerRef.current.getBoundingClientRect()
+                      handleZoomWithCenter(0.1, rect.width / 2, rect.height / 2)
+                    }
+                  }}>
+                    <ZoomIn className="w-4 h-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" disabled={isRenderingRef.current} onClick={() => setZoomState({ scale: 1 })}>
+                    <RotateCcw className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm text-gray-700 bg-white px-2 py-1 rounded border">
+                    {Math.round(zoomState.scale * 100)}%
+                  </span>
+                </div>
+              </div>
               <div className="flex items-center space-x-2 mt-4">
                 <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>이전</Button>
                 <span className="text-sm text-gray-700">{currentPage} / {pdfPageCount}</span>

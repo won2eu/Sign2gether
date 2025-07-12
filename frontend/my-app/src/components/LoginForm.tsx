@@ -2,12 +2,12 @@
 
 import { Button } from "@/components/ui/button"
 import { Chrome } from "lucide-react" // Google 아이콘을 위해 Chrome 아이콘 사용
+import { authService } from "@/services/auth"
 
 export default function LoginForm() {
   const handleGoogleLogin = () => {
-    // 백엔드의 구글 로그인 엔드포인트로 리다이렉트
     console.log("구글 로그인 버튼 클릭됨")
-    window.location.href = 'http://localhost:8000/auth/google/login'
+    authService.initiateGoogleLogin()
   }
 
   return (
@@ -19,7 +19,7 @@ export default function LoginForm() {
         <Chrome className="w-5 h-5" />
         <span>Google로 로그인</span>
       </Button>
-      {/* 다른 소셜 로그인 버튼을 추가할 수 있습니다. */}
+      {/* 다른 소셜 로그인 버튼을 추가할 수 있음 */}
     </div>
   )
 }
