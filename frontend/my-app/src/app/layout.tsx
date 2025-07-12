@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/header"; //상단 바 import
+import Header from "@/components/Header"; //상단 바 import
 import FileDropZone from "@/components/DropFileZone"; //  파일 드랍 영역 import 
 
 const geistSans = Geist({
