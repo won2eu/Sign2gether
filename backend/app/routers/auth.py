@@ -167,6 +167,7 @@ async def logout():
         key="access_token",
         httponly=True,
         secure=False,
-        samesite="lax"
+        samesite="lax",
+        domain="localhost"
     )
     return response

@@ -19,7 +19,7 @@ async def get_user_by_id(user_id: int):
 
 async def create_or_update_user(userinfo: dict):
     async with AsyncSessionLocal() as session:
-        # 이메일로 기존 사용자 확인
+        # 구글아이디로 기존 사용자 확인
         existing_user = await get_user_by_google_id(userinfo["id"])
         
         if existing_user:
