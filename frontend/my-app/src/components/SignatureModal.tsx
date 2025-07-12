@@ -24,7 +24,7 @@ export default function SignatureModal({ open, onClose, onSave }: SignatureModal
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-10 relative">
         <h2 className="text-lg font-semibold mb-4">서명 만들기</h2>
-        {/* 색상 선택 */}
+        {/* 색상 선택 */}   
         <div className="flex items-center space-x-4 mb-4">
           {COLORS.map((color) => (
             <button
