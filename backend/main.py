@@ -1,8 +1,9 @@
 
 
 from fastapi import FastAPI
-from app.routers import auth
+from app.routers import auth, upload
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
@@ -14,4 +15,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/resources", StaticFiles(directory="resources"), name="resources")
 app.include_router(auth.router)
+app.include_router(upload.router)
