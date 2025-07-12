@@ -3,11 +3,13 @@
 // DropFileZone: 이미지, PDF 파일만 업로드/미리보기 지원, PDF는 페이지 넘기기 기능 포함
 // 확대/축소 및 패닝 기능 추가
 // 서명 이미지 추가 및 드래그 앤 드롭 기능 추가
+// Framer Motion 애니메이션 추가
 
 import type React from "react"
 import { useState, useRef, useCallback, useEffect } from "react"
-import { Upload, ZoomIn, ZoomOut, RotateCcw, Move, Minus, Plus, RotateCw, ChevronLeft, ChevronRight, X } from "lucide-react"
+import { Upload, Minus, Plus, RotateCw, ChevronLeft, ChevronRight, X, UserPlus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { motion, AnimatePresence } from "framer-motion"
 
 // 업로드할 파일 모델 객체 타입
 interface UploadedFile {
@@ -38,6 +40,16 @@ interface PanState {
     height: number
     isDragging: boolean
     isResizing: boolean
+  }
+
+  // 서명 구성원 타입
+  interface SignerMember {
+    id: string
+    name: string
+    email: string
+    role: string
+    status: 'pending' | 'signed' | 'completed'
+    signatureId?: string
   }
 
 export default function FileDropZone() {
@@ -94,6 +106,12 @@ export default function FileDropZone() {
     startH: number
   } | null>(null)
 
+  // 서명 구성원 상태
+  const [signerMembers, setSignerMembers] = useState<SignerMember[]>([])
+  const [newMemberName, setNewMemberName] = useState('')
+  const [newMemberEmail, setNewMemberEmail] = useState('')
+  const [newMemberRole, setNewMemberRole] = useState('')
+
   // 서명 이미지 추가 함수
   const addSignature = useCallback((dataUrl: string) => {
     // 기존 서명들과 겹치지 않는 위치 계산
@@ -118,6 +136,38 @@ export default function FileDropZone() {
   // 서명 이미지 제거 함수
   const removeSignature = useCallback((id: string) => {
     setSignatures(prev => prev.filter(sig => sig.id !== id))
+  }, [])
+
+  // 서명 구성원 추가 함수
+  const addSignerMember = useCallback(() => {
+    if (!newMemberName.trim() || !newMemberEmail.trim() || !newMemberRole.trim()) {
+      return
+    }
+    
+    const newMember: SignerMember = {
+      id: `member-${Date.now()}`,
+      name: newMemberName.trim(),
+      email: newMemberEmail.trim(),
+      role: newMemberRole.trim(),
+      status: 'pending'
+    }
+    
+    setSignerMembers(prev => [...prev, newMember])
+    setNewMemberName('')
+    setNewMemberEmail('')
+    setNewMemberRole('')
+  }, [newMemberName, newMemberEmail, newMemberRole])
+
+  // 서명 구성원 제거 함수
+  const removeSignerMember = useCallback((id: string) => {
+    setSignerMembers(prev => prev.filter(member => member.id !== id))
+  }, [])
+
+  // 서명 구성원 상태 업데이트 함수
+  const updateMemberStatus = useCallback((id: string, status: SignerMember['status']) => {
+    setSignerMembers(prev => prev.map(member => 
+      member.id === id ? { ...member, status } : member
+    ))
   }, [])
 
   // 서명 드래그 시작
@@ -295,8 +345,8 @@ export default function FileDropZone() {
       setLoading(true)
       img.onload = () => {
         // 고정 캔버스 크기
-        const canvasWidth = 600
-        const canvasHeight = 800
+        const canvasWidth = 500
+        const canvasHeight = 700
         canvasRef.current!.width = canvasWidth
         canvasRef.current!.height = canvasHeight
 
@@ -358,8 +408,8 @@ export default function FileDropZone() {
           if (canvasRef.current) {
             const pageToRender = currentPage > pdf.numPages ? 1 : currentPage;
             const page = await pdf.getPage(pageToRender);
-            const canvasWidth = 800;
-            const canvasHeight = 1000;
+            const canvasWidth = 500;
+            const canvasHeight = 700;
             const originalViewport = page.getViewport({ scale: 1 });
             const baseScale = Math.min(canvasWidth / originalViewport.width, canvasHeight / originalViewport.height, 1.5)
             const scale = baseScale * zoomState.scale;
@@ -408,8 +458,8 @@ export default function FileDropZone() {
         setLoading(true);
         try {
           const page = await pdfDocRef.current.getPage(currentPage);
-          const canvasWidth = 800;
-          const canvasHeight = 1000;
+          const canvasWidth = 500;
+          const canvasHeight = 700;
           const originalViewport = page.getViewport({ scale: 1 });
           const baseScale = Math.min(canvasWidth / originalViewport.width, canvasHeight / originalViewport.height, 1.5)
           const scale = baseScale * zoomState.scale;
@@ -458,8 +508,9 @@ export default function FileDropZone() {
     isRenderingRef.current = false
     setZoomState({ scale: 1 })
     setPanState({ x: 0, y: 0 })
-    // 서명도 함께 제거
+    // 서명과 서명 구성원도 함께 제거
     setSignatures([])
+    setSignerMembers([])
   }, [])
 
   // 서명 추가 이벤트 리스너
@@ -560,306 +611,464 @@ export default function FileDropZone() {
   }, [draggedSignatureId, dragOffset, handleSignatureMouseUp, containerRef]);
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto">
       {/* Drop Zone (파일 업로드 영역) */}
-      {!uploadedFile && (
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`
+      <AnimatePresence>
+        {!uploadedFile && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.5 }}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+                      className={`
             border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200
-            ${isDragOver ? "border-blue-500 bg-blue-50 scale-105" : "border-gray-300 hover:border-gray-400"}
+            ${isDragOver ? "border-black bg-blue-50 scale-105" : "border-black hover:border-gray-700"}
           `}
-        >
-          <div className="flex flex-col items-center space-y-4">
-            <div
-              className={`
-              w-16 h-16 rounded-full flex items-center justify-center transition-colors
-              ${isDragOver ? "bg-blue-100" : "bg-gray-100"}
-            `}
+          >
+            <div className="flex flex-col items-center space-y-4">
+              <div
+                className={`
+                w-16 h-16 rounded-full flex items-center justify-center transition-colors border border-gray-700
+                ${isDragOver ? "bg-blue-50" : "bg-transparent"}
+              `}
+              >
+                <Upload className={`w-8 h-8 ${isDragOver ? "text-blue-700" : "text-black"}`} />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">이미지 또는 PDF 파일을 여기에 드래그하세요</h3>
+                <p className="text-gray-600 mb-4">또는 클릭해서 파일을 선택하세요</p>
+              </div>
+
+              {/* 파일 선택 input */}
+              <input type="file" accept="image/*,application/pdf" onChange={handleFileInput} className="sr-only" id="file-input" />
+              <Button variant="outline" className="cursor-pointer bg-transparent text-black-400 border-black hover:text-white hover:bg-black hover:border-black" asChild>
+                <label htmlFor="file-input">
+                  파일 선택
+                </label>
+              </Button>
+              <p className="text-sm text-black-400 mt-4">PDF, JPG, PNG 파일만 지원합니다.</p>
+              <p className="text-xs text-black-400 mt-2">업로드 후 버튼으로 확대/축소</p>
+              {errorMsg && <div className="text-red-500 mt-2">{errorMsg}</div>}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 파일 업로드 후 레이아웃 */}
+      <AnimatePresence>
+        {uploadedFile && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mt-6"
+          >
+            {/* 파일 정보 헤더 */}
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.3 }}
+              className="flex w-full justify-between items-center mb-6"
             >
-              <Upload className={`w-8 h-8 ${isDragOver ? "text-blue-600" : "text-gray-500"}`} />
-            </div>
+              <div className="flex-1 min-w-0 mr-4">
+                <span className="font-semibold text-gray-800 truncate block">{uploadedFile.name}</span>
+                <span className="text-sm text-gray-600 truncate block">({uploadedFile.type || "알 수 없는 형식"})</span>
+              </div>
+              <Button variant="outline" onClick={removeFile} className="flex-shrink-0">파일 제거</Button>
+            </motion.div>
 
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">이미지 또는 PDF 파일을 여기에 드래그하세요</h3>
-              <p className="text-gray-600 mb-4">또는 클릭해서 파일을 선택하세요</p>
-            </div>
+            {loading && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-blue-600 mb-4 text-center"
+              >
+                미리보기 준비 중...
+              </motion.div>
+            )}
 
-            {/* 파일 선택 input */}
-            <input type="file" accept="image/*,application/pdf" onChange={handleFileInput} className="sr-only" id="file-input" />
-            <Button variant="outline" className="cursor-pointer bg-transparent" asChild>
-              <label htmlFor="file-input">
-                파일 선택
-              </label>
-            </Button>
-            <p className="text-sm text-gray-500 mt-4">PDF, JPG, PNG 파일만 지원합니다</p>
-            <p className="text-xs text-gray-400 mt-2">업로드 후 버튼으로 확대/축소, 더블클릭으로 리셋</p>
-            {errorMsg && <div className="text-red-500 mt-2">{errorMsg}</div>}
-          </div>
-        </div>
-      )}
+            {showSignatureAdded && (
+              <motion.div 
+                initial={{ opacity: 0, x: 100 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 100 }}
+                className="fixed top-20 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-x-0 flex items-center space-x-2"
+              >
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                <span>서명이 추가되었습니다! 드래그하여 위치를 조정하세요.</span>
+              </motion.div>
+            )}
 
-      {/* 미리보기 영역 */}
-      {uploadedFile && (
-        <div className="mt-6 flex flex-col items-center">
-          <div className="flex w-full justify-between items-center mb-4">
-            <div className="flex-1 min-w-0 mr-4">
-              <span className="font-semibold text-gray-900 truncate block">{uploadedFile.name}</span>
-              <span className="text-sm text-gray-500 truncate block">({uploadedFile.type || "알 수 없는 형식"})</span>
-            </div>
-            <Button variant="outline" onClick={removeFile} className="flex-shrink-0">파일 제거</Button>
-          </div>
-          {loading && <div className="text-blue-600 mb-4">미리보기 준비 중...</div>}
-          {showSignatureAdded && (
-            <div className="fixed top-20 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-x-0 flex items-center space-x-2">
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-              <span>서명이 추가되었습니다! 드래그하여 위치를 조정하세요.</span>
-            </div>
-          )}
-          {/* 이미지 미리보기 */}
-          {previewType === "image" && (
-            <div
-              ref={containerRef}
-              className="relative w-[600px] h-[800px] border rounded shadow overflow-hidden"
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              style={{ cursor: zoomState.scale > 1 ? (isPanningRef.current ? 'grabbing' : 'grab') : 'default' }}
-            >
-              <canvas
-                ref={canvasRef}
-                className="absolute top-0 left-0 w-full h-full"
-                style={{}}
-              />
-                             <div className="absolute bottom-4 left-4 flex items-center space-x-2 bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-white/20">
-                  <div className="flex items-center space-x-1">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      disabled={isRenderingRef.current} 
-                      onClick={() => {
-                        if (containerRef.current && !isRenderingRef.current) {
-                          const rect = containerRef.current.getBoundingClientRect()
-                          handleZoomWithCenter(-0.1, rect.width / 2, rect.height / 2)
-                        }
-                      }}
-                      className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
-                    >
-                      <Minus className="w-4 h-4 text-gray-600" />
-                    </Button>
-                    <div className="w-16 h-8 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-200">
-                      <span className="text-sm font-medium text-gray-700">
-                        {Math.round(zoomState.scale * 100)}%
-                      </span>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      disabled={isRenderingRef.current} 
-                      onClick={() => {
-                        if (containerRef.current && !isRenderingRef.current) {
-                          const rect = containerRef.current.getBoundingClientRect()
-                          handleZoomWithCenter(0.1, rect.width / 2, rect.height / 2)
-                        }
-                      }}
-                      className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
-                    >
-                      <Plus className="w-4 h-4 text-gray-600" />
-                    </Button>
-                  </div>
-                  <div className="w-px h-6 bg-gray-200"></div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    disabled={isRenderingRef.current} 
-                    onClick={() => {
-                      setZoomState({ scale: 1 })
-                      setPanState({ x: 0, y: 0 })
-                    }}
-                    className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
-                    title="리셋"
-                  >
-                    <RotateCw className="w-4 h-4 text-gray-600" />
-                  </Button>
-                </div>
-            </div>
-          )}
-          {/* PDF 미리보기 + 페이지 넘기기 */}
-          {previewType === "pdf" && (
-            <>
-              <div className="flex items-center space-x-4">
-                {/* 왼쪽 페이지 버튼 */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="w-12 h-12 p-0 bg-white/90 backdrop-blur-md hover:bg-white/95 rounded-full shadow-lg border border-white/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-6 h-6 text-gray-700" />
-                </Button>
-
-                {/* PDF 미리보기 영역 */}
-                <div className="relative">
+            {/* 메인 컨텐츠 영역 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* 왼쪽: PDF/이미지 미리보기 */}
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3, duration: 0.8 }}
+                className="flex flex-col items-center"
+              >
+                {/* 이미지 미리보기 */}
+                {previewType === "image" && (
                   <div
                     ref={containerRef}
-                    className="w-[600px] h-[800px] border rounded shadow overflow-hidden relative"
+                    className="relative w-[500px] h-[700px] border rounded shadow overflow-hidden"
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
                     style={{ cursor: zoomState.scale > 1 ? (isPanningRef.current ? 'grabbing' : 'grab') : 'default' }}
                   >
-                    <canvas 
-                      ref={canvasRef} 
+                    <canvas
+                      ref={canvasRef}
                       className="absolute top-0 left-0 w-full h-full"
                       style={{}}
                     />
-                    
-                    {/* 서명 이미지 오버레이 */}
-                    {signatures.map(signature => (
-                      <div
-                        key={signature.id}
-                        className={`absolute cursor-move border-2 transition-all duration-200 group ${
-                          signature.isDragging 
-                            ? 'border-blue-600 bg-blue-50/30 shadow-lg' 
-                            : 'border-blue-400 bg-white/10 hover:bg-white/20'
-                        }`}
-                        style={{
-                          left: signature.x,
-                          top: signature.y,
-                          width: signature.width,
-                          height: signature.height,
-                          zIndex: signature.isDragging ? 1000 : 100,
-                          transform: signature.isDragging ? 'scale(1.05)' : 'scale(1)',
-                          boxShadow: signature.isDragging ? '0 4px 12px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.2)'
-                        }}
-                        draggable={false}
-                        onMouseDown={e => {
-                          e.preventDefault();
-                          handleSignatureMouseDown(e, signature.id);
-                        }}
-                        onDragStart={e => e.preventDefault()}
-                      >
-                        <img
-                          src={signature.dataUrl}
-                          alt="서명"
-                          className="w-full h-full object-contain pointer-events-none"
-                          draggable={false}
-                        />
-                        {/* 삭제 버튼 */}
-                        <button
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors duration-200 opacity-0 group-hover:opacity-100"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            removeSignature(signature.id)
+                    <div className="absolute bottom-4 left-4 flex items-center space-x-2 bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-white/20">
+                      <div className="flex items-center space-x-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          disabled={isRenderingRef.current} 
+                          onClick={() => {
+                            if (containerRef.current && !isRenderingRef.current) {
+                              const rect = containerRef.current.getBoundingClientRect()
+                              handleZoomWithCenter(-0.1, rect.width / 2, rect.height / 2)
+                            }
                           }}
+                          className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
                         >
-                          <X className="w-3 h-3" />
-                        </button>
-                        {/* 크기 조절 핸들 */}
-                        <div
-                          className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-se-resize rounded-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          onMouseDown={e => {
-                            e.stopPropagation();
-                            setResizeInfo({
-                              id: signature.id,
-                              startX: e.clientX,
-                              startY: e.clientY,
-                              startW: signature.width,
-                              startH: signature.height
-                            });
+                          <Minus className="w-4 h-4 text-gray-600" />
+                        </Button>
+                        <div className="w-16 h-8 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-200">
+                          <span className="text-sm font-medium text-gray-700">
+                            {Math.round(zoomState.scale * 100)}%
+                          </span>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          disabled={isRenderingRef.current} 
+                          onClick={() => {
+                            if (containerRef.current && !isRenderingRef.current) {
+                              const rect = containerRef.current.getBoundingClientRect()
+                              handleZoomWithCenter(0.1, rect.width / 2, rect.height / 2)
+                            }
                           }}
-                        />
+                          className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                        >
+                          <Plus className="w-4 h-4 text-gray-600" />
+                        </Button>
                       </div>
-                    ))}
+                      <div className="w-px h-6 bg-gray-200"></div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        disabled={isRenderingRef.current} 
+                        onClick={() => {
+                          setZoomState({ scale: 1 })
+                          setPanState({ x: 0, y: 0 })
+                        }}
+                        className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                        title="리셋"
+                      >
+                        <RotateCw className="w-4 h-4 text-gray-600" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* PDF 미리보기 + 페이지 넘기기 */}
+                {previewType === "pdf" && (
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="flex items-center space-x-4">
+                      {/* 왼쪽 페이지 버튼 */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="w-12 h-12 p-0 bg-white/90 backdrop-blur-md hover:bg-white/95 rounded-full shadow-lg border border-white/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ChevronLeft className="w-6 h-6 text-gray-700" />
+                      </Button>
+
+                      {/* PDF 미리보기 영역 */}
+                      <div className="relative">
+                        <div
+                          ref={containerRef}
+                          className="w-[500px] h-[700px] border rounded shadow overflow-hidden relative"
+                          onMouseDown={handleMouseDown}
+                          onMouseMove={handleMouseMove}
+                          onMouseUp={handleMouseUp}
+                          onMouseLeave={handleMouseUp}
+                          style={{ cursor: zoomState.scale > 1 ? (isPanningRef.current ? 'grabbing' : 'grab') : 'default' }}
+                        >
+                          <canvas 
+                            ref={canvasRef} 
+                            className="absolute top-0 left-0 w-full h-full"
+                            style={{}}
+                          />
+                          
+                          {/* 서명 이미지 오버레이 */}
+                          {signatures.map(signature => (
+                            <div
+                              key={signature.id}
+                              className={`absolute cursor-move border-2 transition-all duration-200 group ${
+                                signature.isDragging 
+                                  ? 'border-blue-600 bg-blue-50/30 shadow-lg' 
+                                  : 'border-blue-400 bg-white/10 hover:bg-white/20'
+                              }`}
+                              style={{
+                                left: signature.x,
+                                top: signature.y,
+                                width: signature.width,
+                                height: signature.height,
+                                zIndex: signature.isDragging ? 1000 : 100,
+                                transform: signature.isDragging ? 'scale(1.05)' : 'scale(1)',
+                                boxShadow: signature.isDragging ? '0 4px 12px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.2)'
+                              }}
+                              draggable={false}
+                              onMouseDown={e => {
+                                e.preventDefault();
+                                handleSignatureMouseDown(e, signature.id);
+                              }}
+                              onDragStart={e => e.preventDefault()}
+                            >
+                              <img
+                                src={signature.dataUrl}
+                                alt="서명"
+                                className="w-full h-full object-contain pointer-events-none"
+                                draggable={false}
+                              />
+                              {/* 삭제 버튼 */}
+                              <button
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors duration-200 opacity-0 group-hover:opacity-100"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  removeSignature(signature.id)
+                                }}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                              {/* 크기 조절 핸들 */}
+                              <div
+                                className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-se-resize rounded-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                onMouseDown={e => {
+                                  e.stopPropagation();
+                                  setResizeInfo({
+                                    id: signature.id,
+                                    startX: e.clientX,
+                                    startY: e.clientY,
+                                    startW: signature.width,
+                                    startH: signature.height
+                                  });
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 오른쪽 페이지 버튼 */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.min(pdfPageCount, p + 1))}
+                        disabled={currentPage === pdfPageCount}
+                        className="w-12 h-12 p-0 bg-white/90 backdrop-blur-md hover:bg-white/95 rounded-full shadow-lg border border-white/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ChevronRight className="w-6 h-6 text-gray-700" />
+                      </Button>
+                    </div>
+
+                    {/* 확대/축소 컨트롤 및 페이지 정보 */}
+                    <div className="flex justify-center items-center gap-4">
+                      <div className="flex items-center space-x-2 bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-white/20">
+                        <div className="flex items-center space-x-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            disabled={isRenderingRef.current} 
+                            onClick={() => {
+                              if (containerRef.current && !isRenderingRef.current) {
+                                const rect = containerRef.current.getBoundingClientRect()
+                                handleZoomWithCenter(-0.1, rect.width / 2, rect.height / 2)
+                              }
+                            }}
+                            className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                          >
+                            <Minus className="w-4 h-4 text-gray-600" />
+                          </Button>
+                          <div className="w-16 h-8 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-200">
+                            <span className="text-sm font-medium text-gray-700">
+                              {Math.round(zoomState.scale * 100)}%
+                            </span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            disabled={isRenderingRef.current} 
+                            onClick={() => {
+                              if (containerRef.current && !isRenderingRef.current) {
+                                const rect = containerRef.current.getBoundingClientRect()
+                                handleZoomWithCenter(0.1, rect.width / 2, rect.height / 2)
+                              }
+                            }}
+                            className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                          >
+                            <Plus className="w-4 h-4 text-gray-600" />
+                          </Button>
+                        </div>
+                        <div className="w-px h-6 bg-gray-200"></div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          disabled={isRenderingRef.current} 
+                          onClick={() => {
+                            setZoomState({ scale: 1 })
+                            setPanState({ x: 0, y: 0 })
+                          }}
+                          className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                          title="리셋"
+                        >
+                          <RotateCw className="w-4 h-4 text-gray-600" />
+                        </Button>
+                      </div>
+
+                      {/* 페이지 정보 */}
+                      <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/20">
+                        <span className="text-sm font-medium text-gray-700">
+                          {currentPage} / {pdfPageCount}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 미지원 파일 안내 */}
+                {previewType === "unsupported" && (
+                  <div className="text-gray-600 text-center">이 파일 형식은 미리보기를 지원하지 않습니다.<br/>문서 파일은 PDF로 변환 후 업로드 해주세요.</div>
+                )}
+              </motion.div>
+
+              {/* 오른쪽: 서명 구성원 테이블 */}
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5, duration: 0.8 }}
+                className="flex flex-col"
+              >
+                <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
+                                  <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-gray-800">서명 구성원</h3>
+                  <div className="text-sm text-gray-600">
+                    총 {signerMembers.length}명
                   </div>
                 </div>
 
-                {/* 오른쪽 페이지 버튼 */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.min(pdfPageCount, p + 1))}
-                  disabled={currentPage === pdfPageCount}
-                  className="w-12 h-12 p-0 bg-white/90 backdrop-blur-md hover:bg-white/95 rounded-full shadow-lg border border-white/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-6 h-6 text-gray-700" />
-                </Button>
-              </div>
-
-              {/* 확대/축소 컨트롤 - PDF 영역 밖 왼쪽 아래 */}
-              <div className="flex justify-center items-center mt-4 gap-4">
-                <div className="flex items-center space-x-2 bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-white/20">
-                  <div className="flex items-center space-x-1">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      disabled={isRenderingRef.current} 
-                      onClick={() => {
-                        if (containerRef.current && !isRenderingRef.current) {
-                          const rect = containerRef.current.getBoundingClientRect()
-                          handleZoomWithCenter(-0.1, rect.width / 2, rect.height / 2)
-                        }
-                      }}
-                      className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
-                    >
-                      <Minus className="w-4 h-4 text-gray-600" />
-                    </Button>
-                    <div className="w-16 h-8 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-200">
-                      <span className="text-sm font-medium text-gray-700">
-                        {Math.round(zoomState.scale * 100)}%
-                      </span>
+                  {/* 구성원 추가 폼 */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">새 구성원 추가</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                      <input
+                        type="text"
+                        placeholder="이름"
+                        value={newMemberName}
+                        onChange={(e) => setNewMemberName(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <input
+                        type="email"
+                        placeholder="이메일"
+                        value={newMemberEmail}
+                        onChange={(e) => setNewMemberEmail(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <input
+                        type="text"
+                        placeholder="역할"
+                        value={newMemberRole}
+                        onChange={(e) => setNewMemberRole(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
                     </div>
                     <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      disabled={isRenderingRef.current} 
-                      onClick={() => {
-                        if (containerRef.current && !isRenderingRef.current) {
-                          const rect = containerRef.current.getBoundingClientRect()
-                          handleZoomWithCenter(0.1, rect.width / 2, rect.height / 2)
-                        }
-                      }}
-                      className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                      onClick={addSignerMember}
+                      disabled={!newMemberName.trim() || !newMemberEmail.trim() || !newMemberRole.trim()}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                      <Plus className="w-4 h-4 text-gray-600" />
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      구성원 추가
                     </Button>
                   </div>
-                  <div className="w-px h-6 bg-gray-200"></div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    disabled={isRenderingRef.current} 
-                    onClick={() => {
-                      setZoomState({ scale: 1 })
-                      setPanState({ x: 0, y: 0 })
-                    }}
-                    className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
-                    title="리셋"
-                  >
-                    <RotateCw className="w-4 h-4 text-gray-600" />
-                  </Button>
-                </div>
 
-                {/* 페이지 정보 - 오른쪽 */}
-                <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/20">
-                  <span className="text-sm font-medium text-gray-700">
-                    {currentPage} / {pdfPageCount}
-                  </span>
+                  {/* 구성원 목록 */}
+                  <div className="space-y-3">
+                    {signerMembers.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <UserPlus className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                        <p>아직 구성원이 없습니다.</p>
+                        <p className="text-sm">위 폼에서 구성원을 추가해주세요.</p>
+                      </div>
+                    ) : (
+                      signerMembers.map((member, index) => (
+                        <motion.div
+                          key={member.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1, duration: 0.7 }}
+                          className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <span className="text-sm font-medium text-blue-600">
+                                    {member.name.charAt(0)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-gray-800">{member.name}</h4>
+                                  <p className="text-sm text-gray-600">{member.email}</p>
+                                  <p className="text-xs text-gray-500">{member.role}</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                member.status === 'signed' ? 'bg-green-100 text-green-800' :
+                                'bg-blue-100 text-blue-800'
+                              }`}>
+                                {member.status === 'pending' ? '대기중' :
+                                 member.status === 'signed' ? '서명완료' : '완료'}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeSignerMember(member.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
-          {/* 미지원 파일 안내 */}
-          {previewType === "unsupported" && (
-            <div className="text-red-500">이 파일 형식은 미리보기를 지원하지 않습니다.<br/>문서 파일은 PDF로 변환 후 업로드 해주세요.</div>
-          )}
-        </div>
-      )}
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

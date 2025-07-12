@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/header"; //상단 바 import
-import FileDropZone from "@/components/DropFileZone"; //  파일 드랍 영역 import 
+import Hero from "@/components/Hero"; // Hero 섹션 import
+import Subtitle from "@/components/Subtitle";
+import TryItNow from "@/components/TryItNow";
+import DropFileSection from "@/components/DropFileSection";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,8 +34,14 @@ export default function RootLayout({
       >
         {/* 상단 바 컴포넌트 추가  */}
         <Header /> 
+        {/* Hero 섹션 추가  */}
+        <Hero />
+        {/* Subtitle(부제목) 추가 */}
+        <Subtitle />
+        {/* Try It Now 섹션 추가 */}
+        <TryItNow />
         {/* 파일 드랍 영역 컴포넌트 추가  */}
-        <FileDropZone />
+        <DropFileSection />
         {children}
       </body>
     </html>
