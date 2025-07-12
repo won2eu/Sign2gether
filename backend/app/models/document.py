@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from ..db import Base
@@ -19,6 +19,7 @@ class Document(Base):
     
     # 관계 설정 활성화
     uploader = relationship("User", back_populates="documents")
+    document_signs = relationship("DocumentSign", back_populates="document", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Document(id={self.id}, filename='{self.original_filename}', uploader_id={self.uploader_id})>"

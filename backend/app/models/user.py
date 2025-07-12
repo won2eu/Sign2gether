@@ -15,6 +15,7 @@ class User(Base):
     
     # 관계 설정 활성화
     documents = relationship("Document", back_populates="uploader", cascade="all, delete-orphan")
+    signs = relationship("Sign", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', name='{self.name}')>"

@@ -4,5 +4,7 @@ from ..db import Base
 # 모든 모델을 여기서 import하여 Base에 등록
 from .user import User
 from .document import Document
+from .sign import Sign
+from .document_sign import DocumentSign
 
-__all__ = ["Base", "User", "Document"]
+__all__ = ["Base", "User", "Document", "Sign", "DocumentSign"]
