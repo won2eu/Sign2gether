@@ -2,12 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import os
+from pydantic import BaseModel
 
 from app.dependencies.database import get_db
-from app.models import Document, Sign, DocumentSign
+from app.models import Document, Sign, DocumentSign, DocumentSigner
 from app.routers.auth import get_current_user_from_cookie
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+
+class SignerStatusUpdate(BaseModel):
+    is_signed: bool
 
 @router.get("/")
 async def get_my_documents(
@@ -173,3 +177,70 @@ async def delete_document_sign(
     await db.commit()
 
     return {"message": "문서에서 서명 삭제 성공", "deleted_doc_sign_id": doc_sign_id}
+
+@router.get("/{doc_filename}/signer")
+async def get_signers_of_document(
+    doc_filename: str,
+    db: AsyncSession = Depends(get_db)
+):
+    # 1. 문서 찾기
+    result = await db.execute(
+        select(Document).where(Document.stored_filename == doc_filename)
+    )
+    document = result.scalar_one_or_none()
+    if not document:
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
+
+    # 2. 해당 문서에 삽입된 모든 DocumentSigner 조회
+    result = await db.execute(
+        select(DocumentSigner).where(DocumentSigner.document_id == document.id)
+    )
+    document_signers = result.scalars().all()
+
+    return [
+        {
+            "id": signer.id,
+            "name": signer.name,
+            "email": signer.email,
+            "role": signer.role,
+            "is_signed": signer.is_signed
+        }
+        for signer in document_signers
+    ]
+
+@router.patch("/{doc_filename}/signer/{signer_id}")
+async def update_signer_status(
+    doc_filename: str,
+    signer_id: int,
+    body: SignerStatusUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    # 1. 문서 찾기
+    result = await db.execute(
+        select(Document).where(Document.stored_filename == doc_filename)
+    )
+    document = result.scalar_one_or_none()
+    if not document:
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
+
+    # 2. signer 찾기 (해당 문서에 속한 signer만)
+    result = await db.execute(
+        select(DocumentSigner).where(
+            DocumentSigner.id == signer_id,
+            DocumentSigner.document_id == document.id
+        )
+    )
+    signer = result.scalar_one_or_none()
+    if not signer:
+        raise HTTPException(status_code=404, detail="해당 signer를 찾을 수 없습니다.")
+
+    # 3. is_signed 값 변경
+    signer.is_signed = body.is_signed
+    await db.commit()
+    await db.refresh(signer)
+
+    return {
+        "message": "사인 상태 변경 성공",
+        "signer_id": signer.id,
+        "is_signed": signer.is_signed
+    }
