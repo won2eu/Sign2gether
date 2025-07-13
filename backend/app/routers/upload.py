@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File,Form, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -6,11 +6,11 @@ import os
 import uuid
 import base64
 from datetime import datetime
-
+from typing import Optional
 from app.dependencies.database import get_db
-from app.models import Document, Sign
+from app.models import Document, Sign, DocumentSigner
 from app.routers.auth import get_current_user_from_cookie
-
+import json
 router = APIRouter(prefix="/upload", tags=["upload"])
 
 # 업로드 디렉토리 설정
@@ -26,6 +26,7 @@ os.makedirs(SIGN_DIR, exist_ok=True)
 @router.post("/docs/pdf")
 async def upload_pdf(
     file: UploadFile = File(...),
+    signers: Optional[str] = Form(None),
     current_user: dict = Depends(get_current_user_from_cookie),
     db: AsyncSession = Depends(get_db)  # dependency injection 추가
 ):
@@ -70,10 +71,24 @@ async def upload_pdf(
             mime_type=file.content_type,
             uploaded_at=datetime.utcnow()
         )
-        
         db.add(document)
         await db.commit()
         await db.refresh(document)
+
+        if signers:
+            signers_data = json.loads(signers)
+            for signer in signers_data:
+                document_signer = DocumentSigner(
+                    document_id=document.id,
+                    name=signer["name"],
+                    email=signer["email"],
+                    role=signer["role"],
+                    is_signed=False
+                )
+                db.add(document_signer)
+            await db.commit()
+            await db.refresh(document_signer)
+        
         
         # 응답 데이터
         file_info = {

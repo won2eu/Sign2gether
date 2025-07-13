@@ -6,5 +6,6 @@ from .user import User
 from .document import Document
 from .sign import Sign
 from .document_sign import DocumentSign
+from .document_signer import DocumentSigner
 
-__all__ = ["Base", "User", "Document", "Sign", "DocumentSign"]
+__all__ = ["Base", "User", "Document", "Sign", "DocumentSign", "DocumentSigner"]
