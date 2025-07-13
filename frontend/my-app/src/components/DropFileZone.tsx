@@ -67,6 +67,9 @@ export default function FileDropZone() {
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberRole, setNewMemberRole] = useState('')
+  
+  // 공유 URL 상태 (나중에 백엔드에서 받아올 예정)
+  const [shareUrl, setShareUrl] = useState<string>('')
 
   // 서명 이미지 추가 함수, 서명 dataUrl을 받음
   const addSignature = useCallback((dataUrl: string) => {
@@ -743,11 +746,11 @@ export default function FileDropZone() {
                         <ChevronLeft className="w-6 h-6 text-gray-700" />
                       </Button>
 
-                      {/* PDF 미리보기 영역 */}
+                      {/* PDF 미리보기 영역 - containerRef가 연결된 메인 컨테이너 (500x700 크기) */}
                       <div className="relative">
                         <div
-                          ref={containerRef}
-                          className="w-[500px] h-[700px] border rounded shadow overflow-hidden relative"
+                          ref={containerRef}  // ← PDF 미리보기를 감싸는 메인 상자
+                          className="w-[500px] h-[700px] border rounded shadow overflow-hidden relative bg-white"
                           onMouseDown={handleMouseDown}
                           onMouseMove={handleMouseMove}
                           onMouseUp={handleMouseUp}
@@ -1007,6 +1010,56 @@ export default function FileDropZone() {
                         </motion.div>
                       ))
                     )}
+                  </div>
+
+                  {/* 확정하기 버튼 및 공유 URL 영역 */}
+                  <div className="mt-4">
+                    <div className="flex flex-col space-y-4">
+                      {/* 확정하기 버튼 */}
+                      <div className="text-center">
+                        <Button 
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                          disabled={signerMembers.length === 0}
+                        >
+                          확정하기
+                        </Button>
+                      </div>
+
+                      {/* 구분선 */}
+                      <div className="flex items-center">
+                        <div className="flex-1 h-px bg-gray-300"></div>
+                        <span className="px-4 text-sm text-gray-500">그리고</span>
+                        <div className="flex-1 h-px bg-gray-300"></div>
+                      </div>
+
+                      {/* 공유 URL 영역 */}
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <h5 className="text-sm font-medium text-gray-700 mb-3">공유 URL</h5>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={shareUrl}
+                            readOnly
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white text-gray-600 focus:outline-none"
+                            placeholder="확정하기 버튼을 클릭하여 공유 URL을 생성하세요"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                            onClick={() => {
+                              navigator.clipboard.writeText(shareUrl)
+                              // 복사 완료 알림 (실제로는 toast나 알림 추가)
+                            }}
+                          >
+                            복사
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          이 URL을 구성원들에게 공유하여 서명을 요청할 수 있습니다.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </motion.div>
