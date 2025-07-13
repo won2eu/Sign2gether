@@ -91,8 +91,21 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-@router.get("/google/login")
+@router.get("/google/login",status_code=307,responses={
+        307: {
+            "description": "구글 로그인 페이지로 리다이렉트",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "구글 로그인 페이지로 리다이렉트됩니다.",
+                        "location": "https://accounts.google.com/o/oauth2/v2/auth?res......"
+                    }
+                }
+            }
+        }
+    })
 def login_with_google():
+    """구글 로그인 페이지로 리다이렉트"""
     google_auth_url = (
         "https://accounts.google.com/o/oauth2/v2/auth"
         "?response_type=code"
@@ -102,11 +115,24 @@ def login_with_google():
     )
     return RedirectResponse(url=google_auth_url)
 
-@router.get("/google/callback")
+@router.get("/google/callback",status_code=307,responses={
+        307: {
+            "description": "루트 페이지로 리다이렉트",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "루트 페이지로 리다이렉트됩니다.",
+                        "location": "localhost:3000/"
+                    }
+                }
+            }
+        }
+    })
 async def google_auth_callback(
     code: str,
     db: AsyncSession = Depends(get_db)  # dependency injection 추가
 ):
+    """구글 로그인 콜백"""
     token_url = "https://oauth2.googleapis.com/token"
     data = {
         "code": code,
@@ -151,7 +177,31 @@ async def google_auth_callback(
     )
     return response
 
-@router.get("/me")
+@router.get("/me",responses={
+        200: {
+            "description": "현재 로그인한 사용자 정보 예시",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "email": "hong@example.com",
+                        "name": "홍길동",
+                        "picture": "https://lh3.googleusercontent.com/a/ACg8ocIBgE3IjPjwW99_gZW1Lk1AV26ZgcmtK1slIP-G_p1O2SKRVw=s96-c",
+                        "created_at": "2024-07-13T12:34:56.789Z"
+                    }
+                }
+            }
+        },
+        401: {
+            "description": "인증되지 않은 사용자",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Not authenticated"
+                    }
+                }
+            }
+        }
+    })
 async def get_current_user_info(
     current_user = Depends(get_current_user_from_cookie)
 ):
@@ -164,7 +214,19 @@ async def get_current_user_info(
         "created_at": current_user["created_at"]
     }
 
-@router.get("/logout")
+@router.get("/logout",status_code=307,responses={
+        307: {
+            "description": "루트 페이지로 리다이렉트",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "루트 페이지로 리다이렉트됩니다.",
+                        "location": "localhost:3000/"
+                    }
+                }
+            }
+        }
+    })
 async def logout():
     """로그아웃 - 쿠키 삭제"""
     response = RedirectResponse(url="http://localhost:3000/")

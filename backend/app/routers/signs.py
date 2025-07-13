@@ -9,7 +9,36 @@ from app.routers.auth import get_current_user_from_cookie
 
 router = APIRouter(prefix="/signs", tags=["signs"])
 
-@router.get("/")
+@router.get("/",responses={
+    200:{
+        "description":"로그인한 사용자가 업로드한 서명 이미지 목록 반환",
+        "content":{
+            "application/json":{
+                "example":[
+  {
+    "stored_filename": "sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
+    "file_url": "/resources/signs/sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
+    "uploaded_at": "2025-07-13T05:06:33.210113"
+  },
+  {
+    "stored_filename": "sign_78b47e64-93be-45fc-8244-ef3a99a3e381.png",
+    "file_url": "/resources/signs/sign_78b47e64-93be-45fc-8244-ef3a99a3e381.png",
+    "uploaded_at": "2025-07-13T06:29:19.056700"
+  },
+  {
+    "stored_filename": "sign_a3478ded-17d1-46c1-bb0d-f5f6419305aa.png",
+    "file_url": "/resources/signs/sign_a3478ded-17d1-46c1-bb0d-f5f6419305aa.png",
+    "uploaded_at": "2025-07-13T11:27:50.518180"
+  },
+  {
+    "stored_filename": "sign_e4dd1498-fa81-45bf-91a9-63f3f8f2e5a5.png",
+    "file_url": "/resources/signs/sign_e4dd1498-fa81-45bf-91a9-63f3f8f2e5a5.png",
+    "uploaded_at": "2025-07-13T11:30:45.210874"
+  }
+]
+            }
+        }
+    }})
 async def get_my_signs(
     current_user: dict = Depends(get_current_user_from_cookie),
     db: AsyncSession = Depends(get_db)
@@ -31,7 +60,18 @@ async def get_my_signs(
         for sign in signs
     ]
 
-@router.delete("/{stored_filename}")
+@router.delete("/{stored_filename}",responses={
+    200:{
+        "description":"서명 삭제 성공",
+        "content":{
+            "application/json":{
+                "example":{
+                    "message": "서명 삭제 성공",
+                    "deleted_filename": "sign_893437dd-0070-4f0d-aa83-143ead6f6043.png"
+                }
+            }
+        }
+    }})
 async def delete_sign(
     stored_filename: str,
     current_user: dict = Depends(get_current_user_from_cookie),

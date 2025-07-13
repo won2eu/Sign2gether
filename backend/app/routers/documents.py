@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import os
@@ -13,7 +13,31 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 class SignerStatusUpdate(BaseModel):
     is_signed: bool
 
-@router.get("/")
+@router.get("/",responses={
+        200: {
+            "description": "현재 로그인한 사용자 정보 예시",
+            "content": {
+                "application/json": {
+                    "example": [
+  {
+    "original_filename": "[별지 12] 개인정보 수집&middot%3B이용&middot%3B제공 동의서(개인투자조합 등록 및 투자확인….pdf",
+    "stored_filename": "9140fff4-b53c-4e10-aa12-914abb4e818e.pdf",
+    "file_url": "/resources/docs/9140fff4-b53c-4e10-aa12-914abb4e818e.pdf",
+    "uploaded_at": "2025-07-13T06:30:36.440971",
+    "file_size": 52206,
+    "mime_type": "application/pdf"
+  },
+  {
+    "original_filename": "[별지 12] 개인정보 수집&middot%3B이용&middot%3B제공 동의서(개인투자조합 등록 및 투자확인….pdf",
+    "stored_filename": "85479f10-e2c4-4f9c-82a8-0839841cdf57.pdf",
+    "file_url": "/resources/docs/85479f10-e2c4-4f9c-82a8-0839841cdf57.pdf",
+    "uploaded_at": "2025-07-13T08:05:51.085329",
+    "file_size": 52206,
+    "mime_type": "application/pdf"
+  }]
+                }
+            }
+        }})
 async def get_my_documents(
     current_user: dict = Depends(get_current_user_from_cookie),
     db: AsyncSession = Depends(get_db)
@@ -37,18 +61,68 @@ async def get_my_documents(
         }
         for doc in documents
     ]
+@router.get("/{doc_filename}",responses={
+    200:{
+        "description":"문서 조회 성공",
+        "content":{
+            "application/json":{
+                "example":{
+                    "message": "문서 조회 성공",
+                    "doc_filename": "9140fff4-b53c-4e10-aa12-914abb4e818e.pdf",
+                    "original_filename": "[별지 12] 개인정보 수집&middot%3B이용&middot%3B제공 동의서(개인투자조합 등록 및 투자확인….pdf",
+                    "file_url": "/resources/docs/9140fff4-b53c-4e10-aa12-914abb4e818e.pdf",
+                    "uploaded_at": "2025-07-13T06:30:36.440971",
+                    "file_size": 52206,
+                    "mime_type": "application/pdf"
+                }
+            }
+        }
+    }})
+async def get_document(
+    doc_filename: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    문서 조회
+    """
+    result = await db.execute(
+        select(Document).where(Document.stored_filename == doc_filename)
+    )
+    document = result.scalar_one_or_none()
+    if not document:
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
+    return {
+        "message": "문서 조회 성공",
+        "doc_filename": document.stored_filename,
+        "original_filename": document.original_filename,
+        "file_url": document.file_url,
+        "uploaded_at": document.uploaded_at,
+        "file_size": document.file_size,
+        "mime_type": document.mime_type
+    }
 
-@router.delete("/{stored_filename}")
+@router.delete("/{doc_filename}",responses={
+    200:{
+        "description":"문서 삭제 성공",
+        "content":{
+            "application/json":{
+                "example":{
+                    "message": "문서 삭제 성공",
+                    "deleted_filename": "85479f10-e2c4-4f9c-82a8-0839841cdf57.pdf"
+                }
+            }
+        }
+    }})
 async def delete_document(
-    stored_filename: str,
+    doc_filename: str,
     current_user: dict = Depends(get_current_user_from_cookie),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    파일명(저장된 이름)으로 문서 삭제
+    로그인 된 사용자가 자신 소유의 파일의 파일명(저장된 이름)으로 문서 삭제
     """
     result = await db.execute(
-        select(Document).where(Document.stored_filename == stored_filename)
+        select(Document).where(Document.stored_filename == doc_filename)
     )
     document = result.scalar_one_or_none()
     if not document:
@@ -67,15 +141,29 @@ async def delete_document(
     await db.delete(document)
     await db.commit()
 
-    return {"message": "문서 삭제 성공", "deleted_filename": stored_filename}
+    return {"message": "문서 삭제 성공", "deleted_filename": doc_filename}
 
-@router.post("/{doc_filename}/sign/{sign_filename}")
+@router.post("/{doc_filename}/sign/{sign_filename}",responses={
+    200:{
+        "description":"서명 삽입 성공",
+        "content":{
+            "application/json":{
+                "example":{
+                    "message": "문서에 서명 삽입 성공",
+                    "doc_sign_id": 1
+                }
+            }
+        }
+    }})
 async def insert_sign_to_document(
     doc_filename: str,
     sign_filename: str,
-    body: dict,
+    body: dict = Body(...,description="서명 삽입 정보",examples=[{"x":100,"y":100,"x_ratio":0.5,"y_ratio":0.5,"num_page":1}]),
     db: AsyncSession = Depends(get_db)
 ):
+    """
+    문서에 서명 삽입 (doc_filename, sign_filename, 위치값과 비율, 페이지번호 필요)
+    """
     # 1. 문서 찾기
     result = await db.execute(
         select(Document).where(Document.stored_filename == doc_filename)
@@ -108,14 +196,46 @@ async def insert_sign_to_document(
 
     return {
         "message": "문서에 서명 삽입 성공",
-        "document_sign_id": doc_sign.id
+        "doc_sign_id": doc_sign.id
     }
 
-@router.get("/{doc_filename}/sign")
+@router.get("/{doc_filename}/sign",responses={
+    200:{
+        "description":"문서에 삽입된 서명 목록 반환",
+        "content":{
+            "application/json":{
+                "example":[
+  {
+    "doc_sign_id": 5,
+    "stored_filename": "sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
+    "file_url": "/resources/signs/sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
+    "x": 100,
+    "y": 100,
+    "x_ratio": 0.5,
+    "y_ratio": 0.5,
+    "num_page": 1
+  },
+  {
+    "doc_sign_id": 3,
+    "stored_filename": "sign_78b47e64-93be-45fc-8244-ef3a99a3e381.png",
+    "file_url": "/resources/signs/sign_78b47e64-93be-45fc-8244-ef3a99a3e381.png",
+    "x": 100,
+    "y": 200,
+    "x_ratio": 0.5,
+    "y_ratio": 0.7,
+    "num_page": 1
+  }
+]
+            }
+        }
+    }})
 async def get_signs_of_document(
     doc_filename: str,
     db: AsyncSession = Depends(get_db)
 ):
+    """
+    문서에 삽입된 서명 목록 반환 (doc_sign_id중요하니 기억하기)
+    """
     # 1. 문서 찾기
     result = await db.execute(
         select(Document).where(Document.stored_filename == doc_filename)
@@ -147,12 +267,26 @@ async def get_signs_of_document(
         for doc_sign, sign in doc_signs
     ]
 
-@router.delete("/{doc_filename}/{doc_sign_id}")
+@router.delete("/{doc_filename}/{doc_sign_id}",responses={
+    200:{
+        "description":"문서에서 서명 삭제 성공",
+        "content":{
+            "application/json":{
+                "example":{
+                    "message": "문서에서 서명 삭제 성공",
+                    "deleted_doc_sign_id": 1
+                }
+            }
+        }
+    }})
 async def delete_document_sign(
     doc_filename: str,
     doc_sign_id: int,
     db: AsyncSession = Depends(get_db)
 ):
+    """
+    문서에 삽입된 서명 삭제 (doc_sign_id필요)
+    """
     # 1. 문서 찾기
     result = await db.execute(
         select(Document).where(Document.stored_filename == doc_filename)
@@ -178,11 +312,38 @@ async def delete_document_sign(
 
     return {"message": "문서에서 서명 삭제 성공", "deleted_doc_sign_id": doc_sign_id}
 
-@router.get("/{doc_filename}/signer")
+@router.get("/{doc_filename}/signer",responses={
+    200:{
+        "description":"문서에 초대된 서명자 목록 반환",
+        "content":{
+            "application/json":{
+                "example":[
+  {
+    "signer_id": 6,
+    "name": "홍길동",
+    "email": "hong@example.com",
+    "role": "대표",
+    "is_signed": False
+  },
+  {
+    "signer_id": 7,
+    "name": "김철수",
+    "email": "kim@example.com",
+    "role": "부장",
+    "is_signed": False
+  }
+]
+                }
+            }
+        }
+    })
 async def get_signers_of_document(
     doc_filename: str,
     db: AsyncSession = Depends(get_db)
 ):
+    """
+    문서에 초대된 구성원 목록 조회
+    """
     # 1. 문서 찾기
     result = await db.execute(
         select(Document).where(Document.stored_filename == doc_filename)
@@ -199,7 +360,7 @@ async def get_signers_of_document(
 
     return [
         {
-            "id": signer.id,
+            "signer_id": signer.id,
             "name": signer.name,
             "email": signer.email,
             "role": signer.role,
@@ -208,13 +369,28 @@ async def get_signers_of_document(
         for signer in document_signers
     ]
 
-@router.patch("/{doc_filename}/signer/{signer_id}")
+@router.patch("/{doc_filename}/signer/{signer_id}",responses={
+    200:{
+        "description":"서명자 상태 변경 성공",
+        "content":{
+            "application/json":{
+                "example":{
+                    "message": "사인 상태 변경 성공",
+                    "signer_id": 1,
+                    "is_signed": True
+                }
+            }
+        }
+    }})
 async def update_signer_status(
     doc_filename: str,
     signer_id: int,
     body: SignerStatusUpdate,
     db: AsyncSession = Depends(get_db)
 ):
+    """
+    문서에 초대된 구성원의 서명 여부 변경 (signer_id필요)
+    """
     # 1. 문서 찾기
     result = await db.execute(
         select(Document).where(Document.stored_filename == doc_filename)
