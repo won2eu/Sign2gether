@@ -6,7 +6,6 @@ import { authService } from "@/services/auth"
 
 export default function LoginForm() {
   const handleGoogleLogin = () => {
-    console.log("구글 로그인 버튼 클릭됨")
     authService.initiateGoogleLogin()
   }
 
