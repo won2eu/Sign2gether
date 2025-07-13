@@ -31,7 +31,7 @@ os.makedirs(SIGN_DIR, exist_ok=True)
                 "example":{
   "message": "PDF 업로드 성공",
   "file": {
-    "filename": "b58737ca-166b-4a67-b5ad-5c8e90dee3fb.pdf",
+    "doc_filename": "b58737ca-166b-4a67-b5ad-5c8e90dee3fb.pdf",
     "original_name": "[별지 12] 개인정보 수집&middot%3B이용&middot%3B제공 동의서(개인투자조합 등록 및 투자확인….pdf",
     "size": 52206,
     "uploaded_at": "2025-07-13T11:12:36.974404",
@@ -129,7 +129,7 @@ async def upload_pdf(
         
         # 응답 데이터
         file_info = {
-            "filename": stored_filename,
+            "doc_filename": stored_filename,
             "original_name": file.filename,
             "size": len(content),
             "uploaded_at": document.uploaded_at.isoformat(),
@@ -163,7 +163,7 @@ async def upload_pdf(
                 "example":{
                     "message": "서명 업로드 성공",
                     "sign": {
-                        "filename": "b58737ca-166b-4a67-b5ad-5c8e90dee3fb.png",
+                        "sign_filename": "b58737ca-166b-4a67-b5ad-5c8e90dee3fb.png",
                         "file_url": "/resources/signs/b58737ca-166b-4a67-b5ad-5c8e90dee3fb.png",
                         "uploaded_at": "2025-07-13T11:12:36.974404",
                         "user_id": 1
@@ -244,7 +244,7 @@ async def upload_sign_draw(
         
         # 응답 데이터
         sign_info = {
-            "filename": stored_filename,
+            "sign_filename": stored_filename,
             "file_url": file_url,
             "uploaded_at": sign.uploaded_at.isoformat(),
             "user_id": sign.user_id
@@ -279,7 +279,7 @@ async def upload_sign_draw(
                 "example":{
   "message": "게스트 서명 업로드 성공",
   "sign": {
-    "filename": "sign_guest_65f7efdf-1a27-475d-80c1-cd6161c44174.png",
+    "sign_filename": "sign_guest_65f7efdf-1a27-475d-80c1-cd6161c44174.png",
     "file_url": "/resources/signs/sign_guest_65f7efdf-1a27-475d-80c1-cd6161c44174.png",
     "uploaded_at": "2025-07-13T11:33:43.965629",
     "is_guest": True
@@ -348,7 +348,7 @@ async def upload_sign_draw_guest(
         
         # 응답 데이터
         sign_info = {
-            "filename": stored_filename,
+            "sign_filename": stored_filename,
             "file_url": file_url,
             "uploaded_at": sign.uploaded_at.isoformat(),
             "is_guest": True  # 게스트 사용자임을 표시

@@ -16,22 +16,22 @@ router = APIRouter(prefix="/signs", tags=["signs"])
             "application/json":{
                 "example":[
   {
-    "stored_filename": "sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
+    "sign_filename": "sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
     "file_url": "/resources/signs/sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
     "uploaded_at": "2025-07-13T05:06:33.210113"
   },
   {
-    "stored_filename": "sign_78b47e64-93be-45fc-8244-ef3a99a3e381.png",
+    "sign_filename": "sign_78b47e64-93be-45fc-8244-ef3a99a3e381.png",
     "file_url": "/resources/signs/sign_78b47e64-93be-45fc-8244-ef3a99a3e381.png",
     "uploaded_at": "2025-07-13T06:29:19.056700"
   },
   {
-    "stored_filename": "sign_a3478ded-17d1-46c1-bb0d-f5f6419305aa.png",
+    "sign_filename": "sign_a3478ded-17d1-46c1-bb0d-f5f6419305aa.png",
     "file_url": "/resources/signs/sign_a3478ded-17d1-46c1-bb0d-f5f6419305aa.png",
     "uploaded_at": "2025-07-13T11:27:50.518180"
   },
   {
-    "stored_filename": "sign_e4dd1498-fa81-45bf-91a9-63f3f8f2e5a5.png",
+    "sign_filename": "sign_e4dd1498-fa81-45bf-91a9-63f3f8f2e5a5.png",
     "file_url": "/resources/signs/sign_e4dd1498-fa81-45bf-91a9-63f3f8f2e5a5.png",
     "uploaded_at": "2025-07-13T11:30:45.210874"
   }
@@ -53,14 +53,14 @@ async def get_my_signs(
     # 원하는 필드만 추려서 반환
     return [
         {
-            "stored_filename": sign.stored_filename,
+            "sign_filename": sign.stored_filename,
             "file_url": sign.file_url,
             "uploaded_at": sign.uploaded_at,
         }
         for sign in signs
     ]
 
-@router.delete("/{stored_filename}",responses={
+@router.delete("/{sign_filename}",responses={
     200:{
         "description":"서명 삭제 성공",
         "content":{
@@ -73,7 +73,7 @@ async def get_my_signs(
         }
     }})
 async def delete_sign(
-    stored_filename: str,
+    sign_filename: str,
     current_user: dict = Depends(get_current_user_from_cookie),
     db: AsyncSession = Depends(get_db)
 ):
@@ -82,7 +82,7 @@ async def delete_sign(
     """
     # 1. sign 조회
     result = await db.execute(
-        select(Sign).where(Sign.stored_filename == stored_filename)
+        select(Sign).where(Sign.stored_filename == sign_filename)
     )
     sign = result.scalar_one_or_none()
     if not sign:
@@ -109,4 +109,4 @@ async def delete_sign(
     await db.delete(sign)
     await db.commit()
 
-    return {"message": "서명 삭제 성공", "deleted_filename": stored_filename}
+    return {"message": "서명 삭제 성공", "deleted_filename": sign_filename}

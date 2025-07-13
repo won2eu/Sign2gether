@@ -15,13 +15,13 @@ class SignerStatusUpdate(BaseModel):
 
 @router.get("/",responses={
         200: {
-            "description": "현재 로그인한 사용자 정보 예시",
+            "description": "현재 로그인한 사용자가 업로드한 파일들 목록 예시",
             "content": {
                 "application/json": {
                     "example": [
   {
     "original_filename": "[별지 12] 개인정보 수집&middot%3B이용&middot%3B제공 동의서(개인투자조합 등록 및 투자확인….pdf",
-    "stored_filename": "9140fff4-b53c-4e10-aa12-914abb4e818e.pdf",
+    "doc_filename": "9140fff4-b53c-4e10-aa12-914abb4e818e.pdf",
     "file_url": "/resources/docs/9140fff4-b53c-4e10-aa12-914abb4e818e.pdf",
     "uploaded_at": "2025-07-13T06:30:36.440971",
     "file_size": 52206,
@@ -29,7 +29,7 @@ class SignerStatusUpdate(BaseModel):
   },
   {
     "original_filename": "[별지 12] 개인정보 수집&middot%3B이용&middot%3B제공 동의서(개인투자조합 등록 및 투자확인….pdf",
-    "stored_filename": "85479f10-e2c4-4f9c-82a8-0839841cdf57.pdf",
+    "doc_filename": "85479f10-e2c4-4f9c-82a8-0839841cdf57.pdf",
     "file_url": "/resources/docs/85479f10-e2c4-4f9c-82a8-0839841cdf57.pdf",
     "uploaded_at": "2025-07-13T08:05:51.085329",
     "file_size": 52206,
@@ -53,7 +53,7 @@ async def get_my_documents(
     return [
         {
             "original_filename": doc.original_filename,
-            "stored_filename": doc.stored_filename,
+            "doc_filename": doc.stored_filename,
             "file_url": doc.file_url,
             "uploaded_at": doc.uploaded_at,
             "file_size": doc.file_size,
@@ -207,7 +207,7 @@ async def insert_sign_to_document(
                 "example":[
   {
     "doc_sign_id": 5,
-    "stored_filename": "sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
+    "sign_filename": "sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
     "file_url": "/resources/signs/sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
     "x": 100,
     "y": 100,
@@ -217,7 +217,7 @@ async def insert_sign_to_document(
   },
   {
     "doc_sign_id": 3,
-    "stored_filename": "sign_78b47e64-93be-45fc-8244-ef3a99a3e381.png",
+    "sign_filename": "sign_78b47e64-93be-45fc-8244-ef3a99a3e381.png",
     "file_url": "/resources/signs/sign_78b47e64-93be-45fc-8244-ef3a99a3e381.png",
     "x": 100,
     "y": 200,
@@ -256,7 +256,7 @@ async def get_signs_of_document(
     return [
         {
             "doc_sign_id": doc_sign.id,
-            "stored_filename": sign.stored_filename,
+            "sign_filename": sign.stored_filename,
             "file_url": sign.file_url,
             "x": doc_sign.x,
             "y": doc_sign.y,
