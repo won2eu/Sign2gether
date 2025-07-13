@@ -10,47 +10,7 @@ import { useState, useRef, useCallback, useEffect } from "react"
 import { Upload, Minus, Plus, RotateCw, ChevronLeft, ChevronRight, X, UserPlus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from "framer-motion"
-
-// 업로드할 파일 모델 객체 타입
-interface UploadedFile {
-  name: string
-  size: number
-  type: string
-  file: File
-}
-
-// 줌 상태 타입
-interface ZoomState {
-  scale: number
-}
-
-// 패닝 상태 타입
-interface PanState {
-  x: number
-  y: number
-}
-
-  // 서명 이미지 타입
-  interface SignatureImage {
-    id: string
-    dataUrl: string
-    x: number
-    y: number
-    width: number
-    height: number
-    isDragging: boolean
-    isResizing: boolean
-  }
-
-  // 서명 구성원 타입
-  interface SignerMember {
-    id: string
-    name: string
-    email: string
-    role: string
-    status: 'pending' | 'signed' | 'completed'
-    signatureId?: string
-  }
+import { UploadedFile, ZoomState, PanState, SignatureImage, SignerMember, ResizeInfo, PreviewType } from "@/types/fileUpload"
 
 export default function FileDropZone() {
   // 드래그 오버 상태
@@ -58,7 +18,7 @@ export default function FileDropZone() {
   // 업로드된 파일 정보 (1개만)
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null)
   // 미리보기 타입: 이미지, PDF, 미지원
-  const [previewType, setPreviewType] = useState<"image" | "pdf" | "unsupported" | null>(null)
+  const [previewType, setPreviewType] = useState<PreviewType>(null)
   // 로딩 상태
   const [loading, setLoading] = useState(false)
   // 에러 메시지
@@ -76,14 +36,15 @@ export default function FileDropZone() {
     scale: 1
   })
   
-  // 패닝 상태
+  // 패닝 상태 (마우스 드래그로 pdf 이동시키는 역할)
   const [panState, setPanState] = useState<PanState>({
     x: 0,
     y: 0
   })
   
-  // 패닝 관련 ref들
+  // 패닝 상태 추적 Ref
   const isPanningRef = useRef(false)
+  // 마우스 위치 상태 Ref
   const lastMousePosRef = useRef({ x: 0, y: 0 })
   
   // PDF 렌더링 중복 방지를 위한 ref
@@ -95,16 +56,11 @@ export default function FileDropZone() {
   // 서명 이미지 상태
   const [signatures, setSignatures] = useState<SignatureImage[]>([])
   const [draggedSignatureId, setDraggedSignatureId] = useState<string | null>(null)
+  //마우스가 서명의 어느 부분을 클릭했는지
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [showSignatureAdded, setShowSignatureAdded] = useState(false)
   // 크기 조절 상태
-  const [resizeInfo, setResizeInfo] = useState<{
-    id: string,
-    startX: number,
-    startY: number,
-    startW: number,
-    startH: number
-  } | null>(null)
+  const [resizeInfo, setResizeInfo] = useState<ResizeInfo | null>(null)
 
   // 서명 구성원 상태
   const [signerMembers, setSignerMembers] = useState<SignerMember[]>([])
@@ -112,7 +68,7 @@ export default function FileDropZone() {
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberRole, setNewMemberRole] = useState('')
 
-  // 서명 이미지 추가 함수
+  // 서명 이미지 추가 함수, 서명 dataUrl을 받음
   const addSignature = useCallback((dataUrl: string) => {
     // 기존 서명들과 겹치지 않는 위치 계산
     const baseX = 200
@@ -131,7 +87,7 @@ export default function FileDropZone() {
       isResizing: false
     }
     setSignatures(prev => [...prev, newSignature])
-  }, [signatures.length])
+  }, [signatures.length]) //signatures.length가 변할때마다 함수 재생성 -> useCallback
 
   // 서명 이미지 제거 함수
   const removeSignature = useCallback((id: string) => {
@@ -163,12 +119,6 @@ export default function FileDropZone() {
     setSignerMembers(prev => prev.filter(member => member.id !== id))
   }, [])
 
-  // 서명 구성원 상태 업데이트 함수
-  const updateMemberStatus = useCallback((id: string, status: SignerMember['status']) => {
-    setSignerMembers(prev => prev.map(member => 
-      member.id === id ? { ...member, status } : member
-    ))
-  }, [])
 
   // 서명 드래그 시작
   const handleSignatureMouseDown = useCallback((e: React.MouseEvent, signatureId: string) => {
@@ -266,17 +216,6 @@ export default function FileDropZone() {
     }
   }, [zoomState.scale])
 
-  // 기존 줌 함수 (버튼용)
-  const handleZoom = useCallback((delta: number) => {
-    setZoomState(prev => {
-      const newScale = Math.max(1.0, Math.min(5, prev.scale + delta))
-      return { ...prev, scale: newScale }
-    })
-    // 줌이 1로 되면 패닝 상태 리셋
-    if (zoomState.scale + delta <= 1) {
-      setPanState({ x: 0, y: 0 })
-    }
-  }, [zoomState.scale])
 
   // 파일 타입 판별 및 상태 저장
   const handleFile = useCallback((file: File) => {
@@ -338,6 +277,8 @@ export default function FileDropZone() {
     }
   }, [handleFile])
 
+
+  //----------------------------------------------------------------------------------------------------------------
   // 이미지 미리보기 (canvas에 그림)
   useEffect(() => {
     if (previewType === "image" && uploadedFile && canvasRef.current) {
@@ -347,6 +288,7 @@ export default function FileDropZone() {
         // 고정 캔버스 크기
         const canvasWidth = 500
         const canvasHeight = 700
+        // !는 앞의 변수가 null이 아님을 알려줌.
         canvasRef.current!.width = canvasWidth
         canvasRef.current!.height = canvasHeight
 
@@ -357,7 +299,8 @@ export default function FileDropZone() {
         const drawHeight = img.height * scale
         const offsetX = (canvasWidth - drawWidth) / 2 + panState.x
         const offsetY = (canvasHeight - drawHeight) / 2 + panState.y
-
+        
+        //canvas 그리기 설정
         const ctx = canvasRef.current!.getContext("2d")
         if (!ctx) return setLoading(false)
         ctx.clearRect(0, 0, canvasWidth, canvasHeight)
@@ -368,6 +311,7 @@ export default function FileDropZone() {
       img.src = URL.createObjectURL(uploadedFile.file)
               return () => URL.revokeObjectURL(img.src)
       }
+      //의존성 배열 (아래)
     }, [
       previewType,
       uploadedFile?.name,
@@ -569,6 +513,7 @@ export default function FileDropZone() {
     };
   }, [resizeInfo]);
 
+  //서명 드래그 더 부드럽게 requestAnimationFrame 설정 (코드 이해 안됨 ..)
   useEffect(() => {
     if (!draggedSignatureId) return;
     const onMove = (e: MouseEvent) => {
