@@ -7,5 +7,7 @@ export const API_CONFIG = {
 export const API_ENDPOINTS = {
   AUTH: {
     GOOGLE_LOGIN: '/auth/google/login',
+    ME: '/auth/me', // 내 정보
+    LOGOUT: '/auth/logout', // 로그아웃
   },
 } 

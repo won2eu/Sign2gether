@@ -10,6 +10,7 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from fastapi import HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import JSONResponse
 
 load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
@@ -214,22 +215,12 @@ async def get_current_user_info(
         "created_at": current_user["created_at"]
     }
 
-@router.get("/logout",status_code=307,responses={
-        307: {
-            "description": "루트 페이지로 리다이렉트",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "루트 페이지로 리다이렉트됩니다.",
-                        "location": "localhost:3000/"
-                    }
-                }
-            }
-        }
-    })
+
+# 여기서 리다이렉트 resp는 무조건 307을 반환해서 200을 반환하는 Json Resp로 바꿨습니다!
+@router.get("/logout")
 async def logout():
     """로그아웃 - 쿠키 삭제"""
-    response = RedirectResponse(url="http://localhost:3000/")
+    response = JSONResponse(content={"message": "logout success"})
     response.delete_cookie(
         key="access_token",
         httponly=True,
