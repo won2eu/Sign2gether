@@ -3,6 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { getMyDocuments } from '@/services/document';
 
+function truncateFileName(name: string, maxLength = 30) {
+  return name.length > maxLength ? name.slice(0, maxLength) + "..." : name;
+}
+
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +32,16 @@ export default function DocumentsPage() {
           documents.map((doc) => (
             <div key={doc.doc_filename} className="bg-gray-900 rounded-lg p-4 flex items-center justify-between shadow">
               <div>
-                <div className="text-white font-medium text-lg">{doc.original_filename}</div>
+                <div className="text-white font-medium text-lg">
+                  <a
+                    href={`https://sign2gether.vercel.app/${doc.doc_filename}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline"
+                  >
+                    {truncateFileName(doc.original_filename)}
+                  </a>
+                </div>
                 <div className="text-gray-400 text-sm mt-1">업로드: {new Date(doc.uploaded_at).toLocaleString()}</div>
                 <div className="text-gray-500 text-xs mt-1">{(doc.file_size/1024).toFixed(1)} KB</div>
               </div>
