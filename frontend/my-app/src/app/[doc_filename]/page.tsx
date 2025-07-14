@@ -56,12 +56,66 @@ export default function DocSignPage() {
   // 서명 완료 체크박스 상태
   const [signedStatus, setSignedStatus] = useState<{[key: string]: boolean}>({})
 
+  // 1. 모달 상태 추가
+  const [confirmModal, setConfirmModal] = useState<{ open: boolean, signerId: string | null }>({ open: false, signerId: null });
+
   // 체크박스 토글 함수
   const toggleSignedStatus = async (signerId: string) => {
     try {
       // 현재 상태의 반대값으로 업데이트
       const newStatus = !signedStatus[signerId];
       
+      // PDF 미리보기 영역 크기 (px)
+      const pdfWidth = 500;
+      const pdfHeight = 700;
+      // 체크박스가 true(서명 완료)로 바뀌는 경우에만 API 호출
+      if (newStatus) {
+        // signatures 전체를 PDF 좌표계(0~100)로 변환
+        const signs = signatures.map(sig => ({
+          base64: sig.dataUrl,
+          x: (sig.x / pdfWidth) * 100,
+          y: (sig.y / pdfHeight) * 100,
+          width: (sig.width / pdfWidth) * 100,
+          height: (sig.height / pdfHeight) * 100,
+          num_page: sig.num_page
+        }));
+        try {
+          // API 호출
+          // insertSignToDocument는 services/sign.ts에 구현되어 있음
+          const { insertSignToDocument } = await import('@/services/sign');
+          await insertSignToDocument(doc_filename, parseInt(signerId), signs);
+          console.log('서명 이미지 전송 성공:', { doc_filename, signerId, signs });
+          // 문서 정보 새로고침 (PDF 미리보기 리렌더링)
+          const updatedDoc = await getDocument(doc_filename);
+          setDocument(updatedDoc);
+          setSignatures([]); // 사인 전송 후 오버레이 사인 초기화
+          // PDF 미리보기 파일도 새로 받아오기 (딜레이 추가)
+          setTimeout(async () => {
+            try {
+              setPreviewType(null);
+              const fileUrl = `${API_CONFIG.BACKEND_URL}${updatedDoc.file_url}?t=${Date.now()}`;
+              const res = await fetch(fileUrl);
+              if (!res.ok) throw new Error('파일을 불러올 수 없습니다.');
+              const blob = await res.blob();
+              const file = new File([blob], updatedDoc.original_filename, {
+                type: updatedDoc.mime_type || 'application/pdf'
+              });
+              setUploadedFile({
+                name: updatedDoc.original_filename,
+                size: updatedDoc.file_size,
+                type: updatedDoc.mime_type || 'application/pdf',
+                file: file,
+              });
+              setPreviewType('pdf');
+            } catch (e) {
+              console.error('PDF 새로고침 실패:', e);
+            }
+          }, 700); // 700ms 딜레이
+        } catch (e) {
+          alert('서명 이미지 전송에 실패했습니다.');
+          return;
+        }
+      }
       // API 호출
       await updateSignerStatus(doc_filename, parseInt(signerId), newStatus);
       
@@ -114,7 +168,7 @@ export default function DocSignPage() {
       setLoading(true);
       setErrorMsg(null);
       
-      const fileUrl = `${API_CONFIG.BACKEND_URL}${document.file_url}`;
+      const fileUrl = `${API_CONFIG.BACKEND_URL}${document.file_url}?t=${Date.now()}`;
       
       fetch(fileUrl)
         .then(res => {
@@ -126,13 +180,13 @@ export default function DocSignPage() {
             type: document.mime_type || 'application/pdf'
           });
           
+          setPreviewType(null); // 먼저 null로 바꿔서 useEffect 트리거
           setUploadedFile({
             name: document.original_filename,
             size: document.file_size,
             type: document.mime_type || 'application/pdf',
             file: file,
           });
-          
           setPreviewType('pdf');
         })
         .catch(err => {
@@ -160,10 +214,11 @@ export default function DocSignPage() {
       width: 120,
       height: 60,
       isDragging: false,
-      isResizing: false
+      isResizing: false,
+      num_page: currentPage // 현재 PDF 페이지 번호 반영
     }
     setSignatures(prev => [...prev, newSignature])
-  }, [signatures.length])
+  }, [signatures.length, currentPage])
 
   // 서명 이미지 제거 함수
   const removeSignature = useCallback((id: string) => {
@@ -774,7 +829,12 @@ export default function DocSignPage() {
                           <div className="flex items-center space-x-3">
                             <div className="flex items-center">
                               <button
-                                onClick={() => toggleSignedStatus(signer.signer_id)}
+                                onClick={() => {
+                                  if (!signedStatus[signer.signer_id]) {
+                                    setConfirmModal({ open: true, signerId: signer.signer_id });
+                                  }
+                                }}
+                                disabled={signedStatus[signer.signer_id]}
                                 className={`relative w-6 h-6 rounded-lg border-2 transition-all duration-300 flex items-center justify-center ${
                                   signedStatus[signer.signer_id]
                                     ? 'bg-green-500 border-green-500 shadow-lg shadow-green-200'
@@ -825,6 +885,33 @@ export default function DocSignPage() {
           </div>
         </div>
       </div>
+      {confirmModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+            <h2 className="text-lg font-bold mb-4">서명 확정</h2>
+            <p className="mb-6 text-gray-700">서명을 확정하면 다시 취소할 수 없습니다.<br/>진행하시겠습니까?</p>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-800"
+                onClick={() => setConfirmModal({ open: false, signerId: null })}
+              >
+                취소
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={async () => {
+                  if (confirmModal.signerId) {
+                    await toggleSignedStatus(confirmModal.signerId);
+                  }
+                  setConfirmModal({ open: false, signerId: null });
+                }}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

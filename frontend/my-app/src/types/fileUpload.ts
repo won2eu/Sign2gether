@@ -27,6 +27,7 @@ export interface SignatureImage {
   height: number
   isDragging: boolean
   isResizing: boolean
+  num_page: number
 }
 
 // 서명 구성원 타입
