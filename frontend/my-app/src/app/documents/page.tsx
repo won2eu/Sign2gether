@@ -1,19 +1,22 @@
-import React from 'react';
+"use client"
+
+import React, { useEffect, useState } from 'react';
 import { getMyDocuments } from '@/services/document';
 
-export default async function DocumentsPage() {
-  // 서버 컴포넌트에서 API 호출 (필요시 클라이언트 컴포넌트로 분리 가능)
-  let documents: any[] = [];
-  try {
-    documents = await getMyDocuments();
-  } catch (e) {
-    // 에러 처리 (예: 로그인 안 됨)
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white text-lg">로그인이 필요합니다.</div>
-      </div>
-    );
-  }
+export default function DocumentsPage() {
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getMyDocuments()
+      .then(setDocuments)
+      .catch(() => setError("로그인이 필요합니다."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="text-white">로딩 중...</div></div>;
+  if (error) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="text-white">{error}</div></div>;
 
   return (
     <div className="min-h-screen bg-black py-10 px-4">

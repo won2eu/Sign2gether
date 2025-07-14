@@ -23,7 +23,7 @@ export default function Header() {
   // 서명 이미지 데이터 (base64)
   const [signatureData, setSignatureData] = React.useState<string | null>(null)
   // 로그인 상태
-  const [isLoggedIn, setIsLoggedIn] = React.useState(false)
+  const [isLoggedIn, setIsLoggedIn] = React.useState<null | boolean>(null)
 
   // 로그인 상태 확인
   React.useEffect(() => {
@@ -65,6 +65,8 @@ export default function Header() {
       window.removeEventListener('addSignature', handleAddSignature as EventListener)
     }
   }, [])
+
+  if (isLoggedIn === null) return null;
 
   return (
     <div className="w-full bg-black">
