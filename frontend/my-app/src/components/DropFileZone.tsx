@@ -574,7 +574,7 @@ export default function FileDropZone() {
         signerMembers.map(({ name, email, role }) => ({ name, email, role }))
       );
       // 공유 URL을 서명 페이지 링크로 설정
-      setShareUrl(result.file?.doc_filename ? `http://localhost:3000/${result.file.doc_filename}` : "");
+      setShareUrl(result.file?.doc_filename ? `https://sign2gether.vercel.app/${result.file.doc_filename}` : "");
       setLoading(false);
       alert("업로드 성공! 공유 URL을 복사하여 서명 페이지로 이동하세요.");
     } catch (e: any) {
