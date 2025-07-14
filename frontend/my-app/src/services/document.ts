@@ -1,4 +1,5 @@
 import { API_CONFIG, API_ENDPOINTS } from "@/constants/api";
+import axios from '../lib/axios';
 
 export async function getDocument(doc_filename: string) {
   const res = await fetch(
@@ -47,4 +48,9 @@ export async function updateSignerStatus(doc_filename: string, signer_id: number
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "서명 상태 업데이트 실패");
   return data;
+} 
+
+export async function getMyDocuments() {
+  const res = await axios.get(API_ENDPOINTS.DOCS.GET_MY_DOCUMENTS);
+  return res.data;
 } 

@@ -15,5 +15,6 @@ export const API_ENDPOINTS = {
     GET_DOCUMENT: '/documents/{doc_filename}',
     GET_SIGNERS: '/documents/{doc_filename}/signer',
     UPDATE_SIGNER_STATUS: '/documents/{doc_filename}/signer/{signer_id}',
+    GET_MY_DOCUMENTS: '/documents/',
   },
 } 

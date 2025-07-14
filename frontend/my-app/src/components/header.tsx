@@ -83,9 +83,11 @@ export default function Header() {
           <a href="/" className="text-white hover:text-blue-400 font-medium">
             Home
           </a>
-          <a href="#" className="text-white hover:text-blue-400 font-medium">
-            Documents
-          </a>
+          {isLoggedIn && (
+            <a href="/documents" className="text-white hover:text-blue-400 font-medium">
+              Documents
+            </a>
+          )}
           <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium">
             New
           </Button>
