@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def remove_white_bg_and_b64(image_bytes, threshold=220):
+def set_white_bg_and_b64(image_bytes, threshold=220):
     # 1. 이미지 열기
     img = Image.open(BytesIO(image_bytes)).convert("RGBA")
     datas = img.getdata()
@@ -23,7 +23,7 @@ def remove_white_bg_and_b64(image_bytes, threshold=220):
     for item in datas:
         # 밝은색(흰색~밝은 회색) 픽셀을 투명하게
         if item[0] > threshold and item[1] > threshold and item[2] > threshold:
-            newData.append((255, 255, 255, 0))  # 완전 투명
+            newData.append((255, 255, 255, 255))  # 완전 흰색
         else:
             newData.append(item)
     img.putdata(newData)
@@ -137,7 +137,7 @@ async def delete_sign(
     return {"message": "서명 삭제 성공", "deleted_filename": sign_filename}
 
 
-@router.post("/generate/{name}",responses={
+@router.get("/generate/{name}",responses={
     200:{
         "description":"서명 생성 성공",
         "content":{
@@ -150,8 +150,8 @@ async def delete_sign(
         }
     }})
 async def generate_sign(
-    name: str,
-    current_user: dict = Depends(get_current_user_from_cookie)
+    name: str
+    #current_user: dict = Depends(get_current_user_from_cookie)
 ):
     """
     서명 생성
@@ -170,5 +170,5 @@ async def generate_sign(
         if part.text is not None:
             print(part.text)
         elif part.inline_data is not None:
-            b64_png = remove_white_bg_and_b64(part.inline_data.data)
+            b64_png = set_white_bg_and_b64(part.inline_data.data)
             return {"message": "서명 생성 성공", "sign_base64": b64_png}
