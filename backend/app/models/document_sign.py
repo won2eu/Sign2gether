@@ -8,10 +8,10 @@ class DocumentSign(Base):
     id = Column(Integer, primary_key=True, index=True)
     sign_id = Column(Integer, ForeignKey("signs.id", ondelete="CASCADE"), nullable=False)
     document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
-    x = Column(Float, nullable=False)  # 서명의 x 좌표 (픽셀)
-    y = Column(Float, nullable=False)  # 서명의 y 좌표 (픽셀)
-    x_ratio = Column(Float, nullable=False)  # 서명의 x 좌표 비율 (0~1)
-    y_ratio = Column(Float, nullable=False)  # 서명의 y 좌표 비율 (0~1)
+    x = Column(Float, nullable=False)  # 서명의 x 좌표 (0~100)
+    y = Column(Float, nullable=False)  # 서명의 y 좌표 (0~100)
+    width = Column(Float, nullable=False)  # 폭 (0~100)
+    height = Column(Float, nullable=False)  # 높이 (0~100)
     num_page = Column(Integer, nullable=False, default=1)  # 서명이 위치한 페이지 번호
     
     # 관계 설정

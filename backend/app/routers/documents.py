@@ -158,7 +158,7 @@ async def delete_document(
 async def insert_sign_to_document(
     doc_filename: str,
     sign_filename: str,
-    body: dict = Body(...,description="서명 삽입 정보",examples=[{"x":100,"y":100,"x_ratio":0.5,"y_ratio":0.5,"num_page":1}]),
+    body: dict = Body(...,description="서명 삽입 정보",examples=[{"x":100,"y":100,"width":10,"height":10,"num_page":1}]),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -186,8 +186,8 @@ async def insert_sign_to_document(
         document_id=document.id,
         x=body["x"],
         y=body["y"],
-        x_ratio=body["x_ratio"],
-        y_ratio=body["y_ratio"],
+        width=body["width"],
+        height=body["height"],
         num_page=body["num_page"]
     )
     db.add(doc_sign)
@@ -210,9 +210,9 @@ async def insert_sign_to_document(
     "sign_filename": "sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
     "file_url": "/resources/signs/sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
     "x": 100,
-    "y": 100,
-    "x_ratio": 0.5,
-    "y_ratio": 0.5,
+    "y": 100,   
+    "width": 10,
+    "height": 10,
     "num_page": 1
   },
   {
@@ -221,8 +221,8 @@ async def insert_sign_to_document(
     "file_url": "/resources/signs/sign_78b47e64-93be-45fc-8244-ef3a99a3e381.png",
     "x": 100,
     "y": 200,
-    "x_ratio": 0.5,
-    "y_ratio": 0.7,
+    "width": 10,
+    "height": 10,
     "num_page": 1
   }
 ]
@@ -260,8 +260,8 @@ async def get_signs_of_document(
             "file_url": sign.file_url,
             "x": doc_sign.x,
             "y": doc_sign.y,
-            "x_ratio": doc_sign.x_ratio,
-            "y_ratio": doc_sign.y_ratio,
+            "width": doc_sign.width,
+            "height": doc_sign.height,
             "num_page": doc_sign.num_page
         }
         for doc_sign, sign in doc_signs
