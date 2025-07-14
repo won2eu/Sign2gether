@@ -86,7 +86,7 @@ export default function SignatureModal({ open, onClose, onSave }: SignatureModal
             className="bg-blue-600 text-white hover:bg-blue-700"
             onClick={async () => {
               if (sigCanvasRef.current && !sigCanvasRef.current.isEmpty()) {
-                const rawDataUrl = sigCanvasRef.current.getTrimmedCanvas().toDataURL("image/png");
+                const rawDataUrl = sigCanvasRef.current.getCanvas().toDataURL("image/png");
                 const transparentDataUrl = await removeWhiteBgFromDataUrl(rawDataUrl);
                 onSave(transparentDataUrl);
               }
