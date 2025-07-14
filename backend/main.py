@@ -14,7 +14,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://sign2gether.vercel.app"],
     allow_credentials=True,  # 이게 중요!
     allow_methods=["*"],
     allow_headers=["*"],

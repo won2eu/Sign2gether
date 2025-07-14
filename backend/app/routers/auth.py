@@ -172,9 +172,8 @@ async def google_auth_callback(
         value=jwt_token,
         httponly=True,  # JavaScript에서 접근 불가
         secure=True,   # 개발환경에서는 False, 프로덕션에서는 True
-        samesite="lax",
-        max_age=1800,    # 30분
-        domain="sign2gether-api-production.up.railway.app"
+        samesite="none",
+        max_age=1800
     )
     return response
 
@@ -236,7 +235,6 @@ async def logout():
         key="access_token",
         httponly=True,
         secure=True,
-        samesite="lax",
-        domain="sign2gether-api-production.up.railway.app"
+        samesite="none"
     )
     return response
