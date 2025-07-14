@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-REDIRECT_URI = "http://localhost:8000/auth/google/callback"
+REDIRECT_URI = "https://sign2gether-api-production.up.railway.app/auth/google/callback"
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
@@ -166,15 +166,15 @@ async def google_auth_callback(
     )
 
     # JWT 토큰을 쿠키로 전달 (더 안전함)
-    response = RedirectResponse(url="http://localhost:3000/")
+    response = RedirectResponse(url="https://sign2gether.vercel.app/")
     response.set_cookie(
         key="access_token",
         value=jwt_token,
         httponly=True,  # JavaScript에서 접근 불가
-        secure=False,   # 개발환경에서는 False, 프로덕션에서는 True
+        secure=True,   # 개발환경에서는 False, 프로덕션에서는 True
         samesite="lax",
         max_age=1800,    # 30분
-        domain="localhost"
+        domain="sign2gether-api-production.up.railway.app"
     )
     return response
 
@@ -217,15 +217,26 @@ async def get_current_user_info(
 
 
 # 여기서 리다이렉트 resp는 무조건 307을 반환해서 200을 반환하는 Json Resp로 바꿨습니다!
-@router.get("/logout")
+@router.get("/logout",responses={
+        200: {
+            "description": "루트 페이지로 리다이렉트",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "logout success"
+                    }
+                }
+            }
+        }
+    })
 async def logout():
     """로그아웃 - 쿠키 삭제"""
     response = JSONResponse(content={"message": "logout success"})
     response.delete_cookie(
         key="access_token",
         httponly=True,
-        secure=False,
+        secure=True,
         samesite="lax",
-        domain="localhost"
+        domain="sign2gether-api-production.up.railway.app"
     )
     return response
