@@ -10,4 +10,10 @@ export const API_ENDPOINTS = {
     ME: '/auth/me', // 내 정보
     LOGOUT: '/auth/logout', // 로그아웃
   },
+  DOCS: {
+    PDF_UPLOAD: '/upload/docs/pdf',
+    GET_DOCUMENT: '/documents/{doc_filename}',
+    GET_SIGNERS: '/documents/{doc_filename}/signer',
+    UPDATE_SIGNER_STATUS: '/documents/{doc_filename}/signer/{signer_id}',
+  },
 } 

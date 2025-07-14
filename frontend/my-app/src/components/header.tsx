@@ -80,7 +80,7 @@ export default function Header() {
 
         {/* Top Navigation Bar */}
         <nav className="flex items-center space-x-6">
-          <a href="#" className="text-white hover:text-blue-400 font-medium">
+          <a href="/" className="text-white hover:text-blue-400 font-medium">
             Home
           </a>
           <a href="#" className="text-white hover:text-blue-400 font-medium">

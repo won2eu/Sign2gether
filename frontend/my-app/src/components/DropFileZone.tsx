@@ -11,6 +11,7 @@ import { Upload, Minus, Plus, RotateCw, ChevronLeft, ChevronRight, X, UserPlus, 
 import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from "framer-motion"
 import { UploadedFile, ZoomState, PanState, SignatureImage, SignerMember, ResizeInfo, PreviewType } from "@/types/fileUpload"
+import { uploadPdfWithSigners } from "@/services/upload";
 
 export default function FileDropZone() {
   // 드래그 오버 상태
@@ -515,7 +516,7 @@ export default function FileDropZone() {
       }
     };
   }, [resizeInfo]);
-
+  
   //서명 드래그 더 부드럽게 requestAnimationFrame 설정 (코드 이해 안됨 ..)
   useEffect(() => {
     if (!draggedSignatureId) return;
@@ -557,6 +558,34 @@ export default function FileDropZone() {
       }
     };
   }, [draggedSignatureId, dragOffset, handleSignatureMouseUp, containerRef]);
+
+  // PDF+구성원 업로드 함수
+  const handleUpload = async () => {
+    if (!uploadedFile || signerMembers.length === 0) {
+      setErrorMsg("파일과 구성원을 추가하세요.");
+      return;
+    }
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      //api 호출 (확정하기 버튼)
+      const result = await uploadPdfWithSigners(
+        uploadedFile.file,
+        signerMembers.map(({ name, email, role }) => ({ name, email, role }))
+      );
+      // 공유 URL을 서명 페이지 링크로 설정
+      setShareUrl(result.file?.doc_filename ? `http://localhost:3000/${result.file.doc_filename}` : "");
+      setLoading(false);
+      alert("업로드 성공! 공유 URL을 복사하여 서명 페이지로 이동하세요.");
+    } catch (e: any) {
+      setLoading(false);
+      if (e.message && (e.message.includes('401') || e.message.includes('Not authenticated'))) {
+        alert("로그인 해주세요.");
+      } else {
+        alert(e.message || "업로드 실패");
+      }
+    }
+  };
 
   return (
     <div className="w-full max-w-7xl mx-auto">
@@ -1019,7 +1048,8 @@ export default function FileDropZone() {
                       <div className="text-center">
                         <Button 
                           className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
-                          disabled={signerMembers.length === 0}
+                          disabled={signerMembers.length === 0 || !uploadedFile}
+                          onClick={handleUpload}
                         >
                           확정하기
                         </Button>
