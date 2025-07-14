@@ -1,7 +1,7 @@
 // API 관련 상수
 
 export const API_CONFIG = {
-  BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000',
+  BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'https://sign2gether-api-production.up.railway.app',
 }
 
 export const API_ENDPOINTS = {
