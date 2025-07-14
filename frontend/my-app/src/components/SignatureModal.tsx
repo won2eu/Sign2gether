@@ -1,11 +1,13 @@
 import React, { useRef, useState } from "react"
 import SignatureCanvas from "react-signature-canvas"
 import { Button } from "@/components/ui/button"
+import { uploadSignDraw } from '@/services/document';
 
 interface SignatureModalProps {
   open: boolean
   onClose: () => void
   onSave: (dataUrl: string) => void
+  onSignSaved?: () => void
 }
 
 const COLORS = [
@@ -39,9 +41,11 @@ function removeWhiteBgFromDataUrl(dataUrl: string): Promise<string> {
   });
 }
 
-export default function SignatureModal({ open, onClose, onSave }: SignatureModalProps) {
+export default function SignatureModal({ open, onClose, onSave, onSignSaved }: SignatureModalProps) {
   const sigCanvasRef = useRef<SignatureCanvas>(null)
   const [penColor, setPenColor] = useState(COLORS[0].code)
+  const [uploading, setUploading] = useState(false);
+  const [hasDrawn, setHasDrawn] = useState(false);
 
   if (!open) return null
 
@@ -69,16 +73,46 @@ export default function SignatureModal({ open, onClose, onSave }: SignatureModal
             maxWidth={3}
             backgroundColor="#f9fafb"
             canvasProps={{ width: 600, height: 240, className: "rounded-lg" }}
+            onEnd={() => setHasDrawn(true)}
           />
         </div>
         {/* 버튼 영역 */}
         <div className="flex justify-between items-center mt-2">
           <div className="space-x-2">
-            <Button variant="outline" size="sm" onClick={() => sigCanvasRef.current?.clear()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                sigCanvasRef.current?.clear();
+                setHasDrawn(false);
+              }}
+            >
               지우기
             </Button>
             <Button variant="outline" size="sm" onClick={onClose}>
               취소
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={uploading || !hasDrawn}
+              onClick={async () => {
+                if (sigCanvasRef.current && !sigCanvasRef.current.isEmpty()) {
+                  setUploading(true);
+                  const rawDataUrl = sigCanvasRef.current.getCanvas().toDataURL("image/png");
+                  try {
+                    await uploadSignDraw(rawDataUrl);
+                    alert('서명이 성공적으로 업로드되었습니다!');
+                    if (typeof onSignSaved === 'function') onSignSaved();
+                  } catch {
+                    alert('서명 업로드에 실패했습니다.');
+                  } finally {
+                    setUploading(false);
+                  }
+                }
+              }}
+            >
+              {uploading ? '저장 중...' : '사인 저장'}
             </Button>
           </div>
           <Button

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react';
-import { getMyDocuments } from '@/services/document';
+import { getMyDocuments, deleteDocument } from '@/services/document';
 
 function truncateFileName(name: string, maxLength = 30) {
   return name.length > maxLength ? name.slice(0, maxLength) + "..." : name;
@@ -11,6 +11,7 @@ export default function DocumentsPage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     getMyDocuments()
@@ -19,8 +20,22 @@ export default function DocumentsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleDelete = async (doc_filename: string) => {
+    setDeleting(doc_filename);
+    try {
+      await deleteDocument(doc_filename);
+      setDocuments((docs) => docs.filter((doc) => doc.doc_filename !== doc_filename));
+    } catch {
+      alert('문서 삭제에 실패했습니다.');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="text-white">로딩 중...</div></div>;
   if (error) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="text-white">{error}</div></div>;
+
+  const backendUrl = "https://sign2gether-api-production.up.railway.app";
 
   return (
     <div className="min-h-screen bg-black py-10 px-4">
@@ -46,8 +61,15 @@ export default function DocumentsPage() {
                 <div className="text-gray-500 text-xs mt-1">{(doc.file_size/1024).toFixed(1)} KB</div>
               </div>
               <div className="flex space-x-2">
-                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">보기</a>
-                <a href={doc.file_url} download className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 text-sm">다운로드</a>
+                <a href={`${backendUrl}${doc.file_url}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">보기</a>
+                <a href={`${backendUrl}${doc.file_url}`} download className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 text-sm">다운로드</a>
+                <button
+                  onClick={() => handleDelete(doc.doc_filename)}
+                  disabled={deleting === doc.doc_filename}
+                  className={`px-3 py-1 rounded text-sm ${deleting === doc.doc_filename ? 'bg-red-300 text-white' : 'bg-red-600 text-white hover:bg-red-700'}`}
+                >
+                  {deleting === doc.doc_filename ? '삭제 중...' : '삭제'}
+                </button>
               </div>
             </div>
           ))

@@ -54,3 +54,13 @@ export async function getMyDocuments() {
   const res = await axios.get(API_ENDPOINTS.DOCS.GET_MY_DOCUMENTS);
   return res.data;
 } 
+
+export async function deleteDocument(doc_filename: string) {
+  const res = await axios.delete(API_ENDPOINTS.DOCS.DELETE_DOCUMENT.replace('{doc_filename}', doc_filename));
+  return res.data;
+} 
+
+export async function uploadSignDraw(imageData: string) {
+  const res = await axios.post(API_ENDPOINTS.DOCS.UPLOAD_SIGN_DRAW, { image: imageData });
+  return res.data;
+} 

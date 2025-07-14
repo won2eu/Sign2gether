@@ -23,8 +23,8 @@ export default function Subtitle() {
         ease: 'power3.out',
         scrollTrigger: {
           trigger: subtitleRef.current,
-          start: 'top 80%',
-          end: 'top 30%',
+          start: 'top 50%',
+          end: 'top 0%',
           scrub: 1,
           toggleActions: 'play none none reverse'
         }

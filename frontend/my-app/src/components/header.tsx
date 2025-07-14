@@ -3,7 +3,8 @@
 import { Button } from "@/components/ui/button"
 import { Download, Pencil } from "lucide-react"
 import SignatureModal from "@/components/SignatureModal"
-import React from "react"
+import React, { useEffect, useState } from "react";
+import { getMySigns, deleteSign } from "@/services/sign";
 
 import {
   Dialog,
@@ -18,6 +19,7 @@ import LoginForm from "./LoginForm"
 import { authService } from '@/services/auth'
 
 export default function Header() {
+  const [signsRefreshKey, setSignsRefreshKey] = useState(0);
   // 서명 모달 오픈 상태
   const [signatureOpen, setSignatureOpen] = React.useState(false)
   // 서명 이미지 데이터 (base64)
@@ -168,16 +170,56 @@ export default function Header() {
         open={signatureOpen}
         onClose={() => setSignatureOpen(false)}
         onSave={(dataUrl) => {
-          // 서명 데이터를 전역 이벤트로 전달
           window.dispatchEvent(new CustomEvent('addSignature', { detail: dataUrl }))
         }}
+        onSignSaved={() => setSignsRefreshKey(k => k + 1)}
       />
-      {/* (선택) 서명 이미지 미리보기 */}
-      {signatureData && (
-        <div className="flex justify-end px-6 mt-2">
-          <img src={signatureData} alt="서명 미리보기" className="h-12 border rounded bg-white" />
-        </div>
-      )}
+      {/* 로그인한 사용자의 모든 서명 이미지 썸네일 */}
+      <MySignThumbnails refreshKey={signsRefreshKey} />
     </div>
   )
+}
+
+function MySignThumbnails({ refreshKey }: { refreshKey?: number }) {
+  const [signs, setSigns] = useState<any[]>([]);
+
+  useEffect(() => {
+    getMySigns()
+      .then(setSigns)
+      .catch(() => setSigns([]));
+  }, [refreshKey]);
+
+  if (signs.length === 0) return null;
+
+  return (
+    <div className="flex justify-end px-6 mt-2 gap-2">
+      {signs.map((sign) => (
+        <div key={sign.sign_filename} className="flex flex-col items-center">
+          <img
+            src={`https://sign2gether-api-production.up.railway.app${sign.file_url}`}
+            alt="서명"
+            className="h-12 w-auto border border-black rounded"
+            style={{ filter: "invert(1)", background: "black" }}
+            title={sign.sign_filename}
+          />
+          <button
+            onClick={async () => {
+              if (window.confirm('정말 삭제하시겠습니까?')) {
+                try {
+                  await deleteSign(sign.sign_filename);
+                  setSigns(signs => signs.filter(s => s.sign_filename !== sign.sign_filename));
+                } catch {
+                  alert('삭제에 실패했습니다.');
+                }
+              }
+            }}
+            className="mt-1 text-white text-base hover:underline focus:outline-none"
+            title="삭제"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  );
 }

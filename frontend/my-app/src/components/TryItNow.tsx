@@ -25,7 +25,8 @@ export default function TryItNow() {
           stagger: 0.07,
           scrollTrigger: {
             trigger: boxRef.current,
-            start: "top 80%",
+            start: "top 50%",
+            end : "top 0%",
             toggleActions: "restart none none none"
           }
         }

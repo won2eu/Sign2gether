@@ -16,5 +16,10 @@ export const API_ENDPOINTS = {
     GET_SIGNERS: '/documents/{doc_filename}/signer',
     UPDATE_SIGNER_STATUS: '/documents/{doc_filename}/signer/{signer_id}',
     GET_MY_DOCUMENTS: '/documents/',
+    DELETE_DOCUMENT: '/documents/{doc_filename}',
+    UPLOAD_SIGN_DRAW: '/upload/sign/draw',
+  },
+  SIGNS: {
+    DELETE_SIGN: '/signs/{sign_filename}',
   },
 } 
