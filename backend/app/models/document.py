@@ -19,7 +19,6 @@ class Document(Base):
     
     # 관계 설정 활성화
     uploader = relationship("User", back_populates="documents")
-    document_signs = relationship("DocumentSign", back_populates="document", cascade="all, delete-orphan")
     signers = relationship("DocumentSigner", back_populates="document", cascade="all, delete-orphan")
     
     def __repr__(self):

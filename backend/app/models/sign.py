@@ -14,7 +14,7 @@ class Sign(Base):
     
     # 관계 설정
     user = relationship("User", back_populates="signs")
-    document_signs = relationship("DocumentSign", back_populates="sign", cascade="all, delete-orphan")
+    #document_signs = relationship("DocumentSign", back_populates="sign", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Signature(id={self.id}, user_id={self.user_id})>"

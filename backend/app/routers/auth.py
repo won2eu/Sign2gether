@@ -166,7 +166,7 @@ async def google_auth_callback(
     )
 
     # JWT 토큰을 쿠키로 전달 (더 안전함)
-    response = RedirectResponse(url="https://sign2gether.vercel.app/")
+    response = RedirectResponse(url="http://localhost:3000/")
     response.set_cookie(
         key="access_token",
         value=jwt_token,
