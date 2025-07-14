@@ -3,15 +3,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import os
 from pydantic import BaseModel
-
+from typing import List
 from app.dependencies.database import get_db
-from app.models import Document, Sign, DocumentSign, DocumentSigner
+from app.models import Document, Sign, DocumentSigner
 from app.routers.auth import get_current_user_from_cookie
+import base64
+import io
+from PyPDF2 import PdfWriter,PdfReader as RLReader
+from PIL import Image
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.utils import ImageReader
+
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 class SignerStatusUpdate(BaseModel):
     is_signed: bool
+    
+class SignInfo(BaseModel):
+       base64: str
+       x: float
+       y: float
+       width: float
+       height: float
+       num_page: int
 
 @router.get("/",responses={
         200: {
@@ -143,28 +159,28 @@ async def delete_document(
 
     return {"message": "문서 삭제 성공", "deleted_filename": doc_filename}
 
-@router.post("/{doc_filename}/sign/{sign_filename}",responses={
+
+
+@router.post("/{doc_filename}/sign/{signer_id}",responses={
     200:{
         "description":"서명 삽입 성공",
         "content":{
             "application/json":{
                 "example":{
-                    "message": "문서에 서명 삽입 성공",
-                    "doc_sign_id": 1
+                    "message": "문서에 서명 삽입 성공"
                 }
             }
         }
     }})
 async def insert_sign_to_document(
     doc_filename: str,
-    sign_filename: str,
-    body: dict = Body(...,description="서명 삽입 정보",examples=[{"x":100,"y":100,"width":10,"height":10,"num_page":1}]),
+    signer_id: int,
+    signs: List[SignInfo] = Body(...,description="서명 삽입 정보"),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    문서에 서명 삽입 (doc_filename, sign_filename, 위치값과 비율, 페이지번호 필요)
+    문서에 서명 삽입 (doc_filename, signer_id, [base 64 ,위치값과 비율, 페이지번호] 필요)
     """
-    # 1. 문서 찾기
     result = await db.execute(
         select(Document).where(Document.stored_filename == doc_filename)
     )
@@ -172,145 +188,83 @@ async def insert_sign_to_document(
     if not document:
         raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
 
-    # 2. 사인 찾기
+    # 2. signer 찾기 (해당 문서에 속한 signer만)
     result = await db.execute(
-        select(Sign).where(Sign.stored_filename == sign_filename)
-    )
-    sign = result.scalar_one_or_none()
-    if not sign:
-        raise HTTPException(status_code=404, detail="서명을 찾을 수 없습니다.")
-
-    # 3. DocumentSign 생성
-    doc_sign = DocumentSign(
-        sign_id=sign.id,
-        document_id=document.id,
-        x=body["x"],
-        y=body["y"],
-        width=body["width"],
-        height=body["height"],
-        num_page=body["num_page"]
-    )
-    db.add(doc_sign)
-    await db.commit()
-    await db.refresh(doc_sign)
-
-    return {
-        "message": "문서에 서명 삽입 성공",
-        "doc_sign_id": doc_sign.id
-    }
-
-@router.get("/{doc_filename}/sign",responses={
-    200:{
-        "description":"문서에 삽입된 서명 목록 반환",
-        "content":{
-            "application/json":{
-                "example":[
-  {
-    "doc_sign_id": 5,
-    "sign_filename": "sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
-    "file_url": "/resources/signs/sign_893437dd-0070-4f0d-aa83-143ead6f6043.png",
-    "x": 100,
-    "y": 100,   
-    "width": 10,
-    "height": 10,
-    "num_page": 1
-  },
-  {
-    "doc_sign_id": 3,
-    "sign_filename": "sign_78b47e64-93be-45fc-8244-ef3a99a3e381.png",
-    "file_url": "/resources/signs/sign_78b47e64-93be-45fc-8244-ef3a99a3e381.png",
-    "x": 100,
-    "y": 200,
-    "width": 10,
-    "height": 10,
-    "num_page": 1
-  }
-]
-            }
-        }
-    }})
-async def get_signs_of_document(
-    doc_filename: str,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    문서에 삽입된 서명 목록 반환 (doc_sign_id중요하니 기억하기)
-    """
-    # 1. 문서 찾기
-    result = await db.execute(
-        select(Document).where(Document.stored_filename == doc_filename)
-    )
-    document = result.scalar_one_or_none()
-    if not document:
-        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
-
-    # 2. 해당 문서에 삽입된 모든 DocumentSign 조회 (JOIN으로 Sign 정보도 함께)
-    result = await db.execute(
-        select(DocumentSign, Sign)
-        .join(Sign, DocumentSign.sign_id == Sign.id)
-        .where(DocumentSign.document_id == document.id)
-    )
-    doc_signs = result.all()
-
-    # 3. 원하는 정보만 추려서 반환
-    return [
-        {
-            "doc_sign_id": doc_sign.id,
-            "sign_filename": sign.stored_filename,
-            "file_url": sign.file_url,
-            "x": doc_sign.x,
-            "y": doc_sign.y,
-            "width": doc_sign.width,
-            "height": doc_sign.height,
-            "num_page": doc_sign.num_page
-        }
-        for doc_sign, sign in doc_signs
-    ]
-
-@router.delete("/{doc_filename}/{doc_sign_id}",responses={
-    200:{
-        "description":"문서에서 서명 삭제 성공",
-        "content":{
-            "application/json":{
-                "example":{
-                    "message": "문서에서 서명 삭제 성공",
-                    "deleted_doc_sign_id": 1
-                }
-            }
-        }
-    }})
-async def delete_document_sign(
-    doc_filename: str,
-    doc_sign_id: int,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    문서에 삽입된 서명 삭제 (doc_sign_id필요)
-    """
-    # 1. 문서 찾기
-    result = await db.execute(
-        select(Document).where(Document.stored_filename == doc_filename)
-    )
-    document = result.scalar_one_or_none()
-    if not document:
-        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
-
-    # 2. document_signs에서 해당 레코드 찾기 (문서와 연결된 것만)
-    result = await db.execute(
-        select(DocumentSign).where(
-            DocumentSign.id == doc_sign_id,
-            DocumentSign.document_id == document.id
+        select(DocumentSigner).where(
+            DocumentSigner.id == signer_id,
+            DocumentSigner.document_id == document.id
         )
     )
-    doc_sign = result.scalar_one_or_none()
-    if not doc_sign:
-        raise HTTPException(status_code=404, detail="해당 문서에 연결된 서명 정보를 찾을 수 없습니다.")
+    signer = result.scalar_one_or_none()
+    if not signer:
+        raise HTTPException(status_code=404, detail="해당 signer를 찾을 수 없습니다.")
 
-    # 3. 삭제
-    await db.delete(doc_sign)
+    # 3. is_signed 값 변경
+    if signer.is_signed == False:
+        signer.is_signed = True;
+    else:
+        raise HTTPException(status_code=400, detail="이미 서명된 문서입니다.")
+    
     await db.commit()
+    await db.refresh(signer)
 
-    return {"message": "문서에서 서명 삭제 성공", "deleted_doc_sign_id": doc_sign_id}
+    reader = RLReader("resources/docs/" + doc_filename)
+    writer = PdfWriter()
+    for page_num in range(len(reader.pages)):
+        page = reader.pages[page_num]
+        page_signs = [s for s in signs if s.num_page == page_num + 1]
+        if not page_signs:
+            writer.add_page(page)
+            continue
+
+        packet = io.BytesIO()
+        # PDF 페이지 크기 가져오기 (points 단위)
+        width = float(page.mediabox.width)
+        height = float(page.mediabox.height)
+        can = canvas.Canvas(packet, pagesize=(width, height))
+
+        for sign in page_signs:
+            # base64 → PIL 이미지 변환
+            img_data = base64.b64decode(sign.base64.split(',')[-1])
+            img = Image.open(io.BytesIO(img_data))
+
+            # 좌표/크기 변환 (PDF 좌표계: 좌하단 0,0)
+            # sign['x'], sign['y'], sign['width'], sign['height']는 PDF 좌표계 기준이어야 함
+            # 만약 퍼센트(0~100)라면 변환 필요
+            pdf_w = float(page.mediabox.width)
+            pdf_h = float(page.mediabox.height)
+
+            x = sign.x * pdf_w/100   
+            w = sign.width * pdf_w/100
+            h = sign.height * pdf_h/100
+            y = pdf_h - sign.y * pdf_h/100 - h
+
+            # reportlab은 좌하단 기준, y좌표 변환 필요
+            can.drawImage(ImageReader(img), x, y, w, h, mask='auto')
+
+        can.save()
+        packet.seek(0)
+
+        # 임시 PDF를 PyPDF2로 읽어서 원본 페이지에 merge
+        
+        overlay = RLReader(packet)
+        page.merge_page(overlay.pages[0])
+        writer.add_page(page)
+
+    # 5. 저장
+    with open("resources/docs/" + doc_filename, "wb") as f:
+        writer.write(f)
+    
+    
+
+    
+
+    return {
+        "message": "문서에 서명 삽입 성공"
+    }
+
+
+
 
 @router.get("/{doc_filename}/signer",responses={
     200:{

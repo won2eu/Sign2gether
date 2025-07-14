@@ -1,11 +1,42 @@
+from collections import namedtuple
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import os
-
+from google import genai
+from google.genai import types
+from PIL import Image
+from io import BytesIO
+import base64   
 from app.dependencies.database import get_db
-from app.models import Sign, DocumentSign
+from app.models import Sign
 from app.routers.auth import get_current_user_from_cookie
+from dotenv import load_dotenv
+
+load_dotenv()
+
+def remove_white_bg_and_b64(image_bytes, threshold=220):
+    # 1. 이미지 열기
+    img = Image.open(BytesIO(image_bytes)).convert("RGBA")
+    datas = img.getdata()
+    newData = []
+    for item in datas:
+        # 밝은색(흰색~밝은 회색) 픽셀을 투명하게
+        if item[0] > threshold and item[1] > threshold and item[2] > threshold:
+            newData.append((255, 255, 255, 0))  # 완전 투명
+        else:
+            newData.append(item)
+    img.putdata(newData)
+
+    # 2. 다시 PNG bytes로 저장
+    output = BytesIO()
+    img.save(output, format="PNG")
+    png_bytes = output.getvalue()
+
+    # 3. base64 인코딩
+    b64_str = base64.b64encode(png_bytes).decode("utf-8")
+    b64_png = f"data:image/png;base64,{b64_str}"
+    return b64_png
 
 router = APIRouter(prefix="/signs", tags=["signs"])
 
@@ -93,13 +124,7 @@ async def delete_sign(
         raise HTTPException(status_code=403, detail="본인 소유의 서명만 삭제할 수 있습니다.")
 
     # 3. document_sign에서 참조 중인지 확인
-    ref_result = await db.execute(
-        select(DocumentSign).where(DocumentSign.sign_id == sign.id)
-    )
-    ref = ref_result.scalar_one_or_none()
-    if ref:
-        raise HTTPException(status_code=400, detail="이 서명은 문서에 삽입되어 있어 삭제할 수 없습니다.")
-
+    
     # 4. 파일 삭제
     file_path = sign.file_url.replace("/resources/signs/", "resources/signs/")
     if os.path.exists(file_path):
@@ -110,3 +135,40 @@ async def delete_sign(
     await db.commit()
 
     return {"message": "서명 삭제 성공", "deleted_filename": sign_filename}
+
+
+@router.post("/generate/{name}",responses={
+    200:{
+        "description":"서명 생성 성공",
+        "content":{
+            "application/json":{
+                "example":{
+                    "message": "서명 생성 성공",
+                    "sign_base64": "base64"
+                }
+            }
+        }
+    }})
+async def generate_sign(
+    name: str,
+    current_user: dict = Depends(get_current_user_from_cookie)
+):
+    """
+    서명 생성
+    """
+    client = genai.Client(api_key=os.getenv("GEMINI_APIKEY"))
+    contents=("Generate a high-resolution PNG image of a handwritten signature for the name "+name+". Use a black ballpoint pen style, with a transparent background. The signature should appear natural, slightly slanted, and fluid, resembling a real personal signature.")
+    response = client.models.generate_content(
+        model="gemini-2.0-flash-preview-image-generation",
+        contents=contents,
+        config=types.GenerateContentConfig(
+        response_modalities=['TEXT', 'IMAGE']
+        )
+    )
+
+    for part in response.candidates[0].content.parts:
+        if part.text is not None:
+            print(part.text)
+        elif part.inline_data is not None:
+            b64_png = remove_white_bg_and_b64(part.inline_data.data)
+            return {"message": "서명 생성 성공", "sign_base64": b64_png}
