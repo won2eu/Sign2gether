@@ -12,6 +12,10 @@ from app.dependencies.database import get_db
 from app.models import Sign
 from app.routers.auth import get_current_user_from_cookie
 from dotenv import load_dotenv
+from fastapi import Query
+from fastapi.websockets import WebSocket, WebSocketDisconnect
+
+sessions ={}
 
 load_dotenv()
 
@@ -150,14 +154,14 @@ async def delete_sign(
         }
     }})
 async def generate_sign(
-    name: str
-    #current_user: dict = Depends(get_current_user_from_cookie)
+    name: str,
+    current_user: dict = Depends(get_current_user_from_cookie)
 ):
     """
     서명 생성
     """
     client = genai.Client(api_key=os.getenv("GEMINI_APIKEY"))
-    contents=("Generate a high-resolution PNG image of a handwritten signature for the name "+name+". Use a black ballpoint pen style, with a transparent background. The signature should appear natural, slightly slanted, and fluid, resembling a real personal signature.")
+    contents=("Generate a high-resolution PNG image of a handwritten signature for the name "+name+". Use a black ballpoint pen style, with a white background. The signature should appear natural, slightly slanted, and fluid, resembling a real personal signature.")
     response = client.models.generate_content(
         model="gemini-2.0-flash-preview-image-generation",
         contents=contents,
@@ -172,3 +176,49 @@ async def generate_sign(
         elif part.inline_data is not None:
             b64_png = set_white_bg_and_b64(part.inline_data.data)
             return {"message": "서명 생성 성공", "sign_base64": b64_png}
+
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket, sessionId: str):
+    await websocket.accept()
+    sessions.setdefault(sessionId, []).append(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            for conn in sessions[sessionId]:
+                if conn != websocket:
+                    await conn.send_text(data)
+    except WebSocketDisconnect:
+        sessions[sessionId].remove(websocket)
+
+"""
+@router.get("/whitebg")
+async def whitebg(image: str = Query(..., description="base64 PNG 이미지 데이터")):
+    try:
+        if "base64," in image:
+            image_data = image.split(",")[1]
+        else:
+            image_data = image
+        image_bytes = base64.b64decode(image_data)
+        img = Image.open(BytesIO(image_bytes))
+        client = genai.Client(api_key=os.getenv("GEMINI_APIKEY"))
+        text_input=("Generate a high-resolution PNG image of a handwritten signature for the name "+name+". Use a black ballpoint pen style, with a white background. The signature should appear natural, slightly slanted, and fluid, resembling a real personal signature.")
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-preview-image-generation",
+            contents=contents,
+            config=types.GenerateContentConfig(
+            response_modalities=['TEXT', 'IMAGE']
+            )
+        )
+
+        for part in response.candidates[0].content.parts:
+            if part.text is not None:
+                print(part.text)
+            elif part.inline_data is not None:
+                b64_png = set_white_bg_and_b64(part.inline_data.data)
+                return {"message": "서명 생성 성공", "sign_base64": b64_png}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="이미지 데이터 처리 중 오류가 발생했습니다.")
+    return {"message": "이미지 데이터 처리 성공", "image": img}
+"""
+

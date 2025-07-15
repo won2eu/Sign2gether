@@ -221,7 +221,7 @@ async def upload_pdf(
                     emails.append(signer["email"])
             # 이메일 전송을 백그라운드로 등록
             if names and emails:
-                background_tasks.add_task(send_email_to_signers, emails, names, file.filename, "https://sign2gether.vercel.app/"+stored_filename)
+                background_tasks.add_task(send_email_to_signers, emails, names, file.filename, "https://sign2gether.vercel.app/document/"+stored_filename)
             await db.commit()
             await db.refresh(document_signer)   
         
