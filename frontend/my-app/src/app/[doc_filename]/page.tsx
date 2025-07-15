@@ -58,6 +58,8 @@ export default function DocSignPage() {
 
   // 1. 모달 상태 추가
   const [confirmModal, setConfirmModal] = useState<{ open: boolean, signerId: string | null }>({ open: false, signerId: null });
+  // 확인 버튼 중복 방지 로딩 상태
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   // 체크박스 토글 함수
   const toggleSignedStatus = async (signerId: string) => {
@@ -601,6 +603,7 @@ export default function DocSignPage() {
                         />
                         
                         {/* 서명 이미지 오버레이 */}
+                        {/* 현재 페이지의 사인만 보이게 */}
                         {signatures
                           .filter(signature => signature.num_page === currentPage)
                           .map(signature => (
@@ -905,13 +908,20 @@ export default function DocSignPage() {
                 취소
               </button>
               <button
-                className="px-4 py-2 rounded neon-btn-white"
+                className="px-4 py-2 rounded neon-btn-white bg-black text-white hover:bg-black/80"
                 onClick={async () => {
-                  if (confirmModal.signerId) {
-                    await toggleSignedStatus(confirmModal.signerId);
+                  if (confirmLoading) return;
+                  setConfirmLoading(true);
+                  try {
+                    if (confirmModal.signerId) {
+                      await toggleSignedStatus(confirmModal.signerId);
+                    }
+                    setConfirmModal({ open: false, signerId: null });
+                  } finally {
+                    setConfirmLoading(false);
                   }
-                  setConfirmModal({ open: false, signerId: null });
                 }}
+                disabled={confirmLoading}
               >
                 확인
               </button>
