@@ -82,9 +82,11 @@ export default function SignatureModal({ open, onClose, onSave, onSignSaved, sig
         const msg = JSON.parse(event.data);
         if (msg.type === "stroke" && sigCanvasRef.current) {
           sigCanvasRef.current.fromData(msg.strokes);
+          setHasDrawn(true);
         }
         if (msg.type === "clear" && sigCanvasRef.current) {
           sigCanvasRef.current.clear();
+          setHasDrawn(false);
         }
       } catch (e) {
         console.error("[SignatureModal] WebSocket 메시지 파싱 에러:", e, event.data);
