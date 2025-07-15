@@ -124,3 +124,47 @@ html, body {
     @apply bg-background text-foreground;
   }
 }
+
+.neon-text-white {
+  color: #fff;
+  text-shadow:
+    0 0 1px #fff,
+    0 0 3px #fff;
+}
+.neon-box-white {
+  box-shadow:
+    0 0 4px #fff,
+    0 0 8px #fff;
+  border: 1.5px solid #fff;
+  background: rgba(0,0,0,0.7);
+}
+.neon-btn-white {
+  color: #fff;
+  background: #000;
+  border: 1.5px solid #fff;
+  box-shadow:
+    0 0 4px #fff,
+    0 0 8px #fff;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.neon-btn-white:hover {
+  border-color: #fff;
+  box-shadow:
+    0 0 8px #fff,
+    0 0 16px #fff;
+}
+
+.neon-text-white-weak {
+  color: #fff;
+  text-shadow:
+    0 0 1px #fff,
+    0 0 2px #fff,
+    0 0 3px #fff;
+}
+
+.neon-text-white-weaker {
+  color: #fff;
+  text-shadow:
+    0 0 1px #fff,
+    0 0 2px #fff;
+}

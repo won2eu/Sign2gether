@@ -345,7 +345,7 @@ export default function Hero() {
         </h1>
         
         {/* 스크롤 인디케이터 */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+        <div className="absolute left-1/2 transform -translate-x-1/2" style={{ bottom: '-150px' }}>
           <div className="animate-bounce">
             <svg 
               className="w-6 h-6 text-white" 

@@ -19,6 +19,31 @@ import LoginForm from "./LoginForm"
 import { authService } from '@/services/auth'
 import AISignatureModal from "@/components/AISignatureModal";
 
+// 흰색 배경을 투명하게 만드는 함수 (SignatureModal.tsx에서 복사)
+function removeWhiteBgFromDataUrl(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve(dataUrl);
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i] > 220 && data[i+1] > 220 && data[i+2] > 220) {
+          data[i+3] = 0;
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.src = dataUrl;
+  });
+}
+
 export default function Header() {
   const [signsRefreshKey, setSignsRefreshKey] = useState(0);
   // 서명 모달 오픈 상태
@@ -99,7 +124,14 @@ export default function Header() {
               setAiSignatureOpen(true);
             }}
           >
-            AI로 서명을 생성해보세요
+            <span
+              className="text-blue-400 transition-all duration-200 group-hover:text-blue-300"
+              style={{ textShadow: '0 0 1px #60a5fa, 0 0 3px #60a5fa' }}
+              onMouseEnter={e => e.currentTarget.style.textShadow = '0 0 6px #60a5fa, 0 0 16px #60a5fa, 0 0 32px #60a5fa'}
+              onMouseLeave={e => e.currentTarget.style.textShadow = '0 0 1px #60a5fa, 0 0 3px #60a5fa'}
+            >
+              AI로 서명을 생성해보세요.
+            </span>
           </button>
           <a href="/" className="text-white hover:text-blue-400 font-medium">
             Home
@@ -225,9 +257,20 @@ function MySignThumbnails({ refreshKey }: { refreshKey?: number }) {
           <img
             src={`https://sign2gether-api-production.up.railway.app${sign.file_url}`}
             alt="서명"
-            className="h-12 w-auto border border-black rounded"
+            className="h-12 w-auto border border-black rounded cursor-pointer"
             style={{ filter: "invert(1)", background: "black" }}
             title={sign.sign_filename}
+            onClick={async () => {
+              const response = await fetch(`https://sign2gether-api-production.up.railway.app${sign.file_url}`);
+              const blob = await response.blob();
+              const reader = new FileReader();
+              reader.onloadend = async function() {
+                const base64data = reader.result as string;
+                const transparentDataUrl = await removeWhiteBgFromDataUrl(base64data);
+                window.dispatchEvent(new CustomEvent('addSignature', { detail: transparentDataUrl }));
+              };
+              reader.readAsDataURL(blob);
+            }}
           />
           <button
             onClick={async () => {

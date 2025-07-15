@@ -530,16 +530,16 @@ export default function DocSignPage() {
   return (
     <div className="min-h-screen bg-black">
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">
+        <div className="neon-box-white rounded-lg shadow-lg p-6">
+          <h1 className="text-3xl font-bold neon-text-white-weak mb-4">
             문서 서명 페이지
           </h1>
           <p className="text-gray-600 mb-4">
-            문서 ID: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{doc_filename}</span>
+            <span className="neon-text-white">문서 ID :</span> <span className="font-mono bg-transparent px-2 py-1 rounded neon-text-white">{doc_filename}</span>
           </p>
           {document && (
             <p className="text-gray-600 mb-4">
-              원본 파일명: <span className="font-mono bg-gray-100 px-2 py-1 rounded">
+              <span className="neon-text-white">원본 파일명 :</span> <span className="font-mono bg-transparent px-2 py-1 rounded neon-text-white">
                 {document.original_filename.length > 50 
                   ? document.original_filename.substring(0, 50) + '...' 
                   : document.original_filename
@@ -547,10 +547,10 @@ export default function DocSignPage() {
               </span>
             </p>
           )}
-          
+            
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* 좌측: PDF 뷰어 */}
-            <div className="bg-gray-100 rounded-lg p-4 min-h-[400px] flex items-center justify-center">
+            <div className="bg-transparent neon-box-white rounded-lg p-4 min-h-[400px] flex items-center justify-center">
               {loading && (
                 <div className="text-blue-600 text-center">
                   미리보기 준비 중...
@@ -579,9 +579,9 @@ export default function DocSignPage() {
                       size="sm"
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
-                      className="w-12 h-12 p-0 bg-white/90 backdrop-blur-md hover:bg-white/95 rounded-full shadow-lg border border-white/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-12 h-12 p-0 neon-btn-white rounded-full shadow-lg border border-white/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <ChevronLeft className="w-6 h-6 text-gray-700" />
+                      <ChevronLeft className="w-6 h-6 text-white" />
                     </Button>
 
                     {/* PDF 미리보기 영역 */}
@@ -666,15 +666,15 @@ export default function DocSignPage() {
                       size="sm"
                       onClick={() => setCurrentPage((p) => Math.min(pdfPageCount, p + 1))}
                       disabled={currentPage === pdfPageCount}
-                      className="w-12 h-12 p-0 bg-white/90 backdrop-blur-md hover:bg-white/95 rounded-full shadow-lg border border-white/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-12 h-12 p-0 neon-btn-white rounded-full shadow-lg border border-white/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <ChevronRight className="w-6 h-6 text-gray-700" />
+                      <ChevronRight className="w-6 h-6 text-white" />
                     </Button>
                   </div>
 
                   {/* 확대/축소 컨트롤 및 페이지 정보 */}
                   <div className="flex justify-center items-center gap-4">
-                    <div className="flex items-center space-x-2 bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-white/20">
+                    <div className="flex items-center space-x-2 neon-box-white p-3 rounded-2xl shadow-xl border border-white/20">
                       <div className="flex items-center space-x-1">
                         <Button 
                           variant="ghost" 
@@ -686,12 +686,12 @@ export default function DocSignPage() {
                               handleZoomWithCenter(-0.1, rect.width / 2, rect.height / 2)
                             }
                           }}
-                          className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                          className="w-8 h-8 p-0 neon-btn-white rounded-xl transition-all duration-200"
                         >
-                          <Minus className="w-4 h-4 text-gray-600" />
+                          <Minus className="w-4 h-4 text-white" />
                         </Button>
-                        <div className="w-16 h-8 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-200">
-                          <span className="text-sm font-medium text-gray-700">
+                        <div className="w-16 h-8 neon-box-white rounded-xl flex items-center justify-center border border-gray-200">
+                          <span className="text-sm font-medium neon-text-white-weaker">
                             {Math.round(zoomState.scale * 100)}%
                           </span>
                         </div>
@@ -705,9 +705,9 @@ export default function DocSignPage() {
                               handleZoomWithCenter(0.1, rect.width / 2, rect.height / 2)
                             }
                           }}
-                          className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                          className="w-8 h-8 p-0 neon-btn-white rounded-xl transition-all duration-200"
                         >
-                          <Plus className="w-4 h-4 text-gray-600" />
+                          <Plus className="w-4 h-4 text-white" />
                         </Button>
                       </div>
                       <div className="w-px h-6 bg-gray-200"></div>
@@ -719,16 +719,16 @@ export default function DocSignPage() {
                           setZoomState({ scale: 1 })
                           setPanState({ x: 0, y: 0 })
                         }}
-                        className="w-8 h-8 p-0 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                        className="w-8 h-8 p-0 neon-btn-white rounded-xl transition-all duration-200"
                         title="리셋"
                       >
-                        <RotateCw className="w-4 h-4 text-gray-600" />
+                        <RotateCw className="w-4 h-4 text-white" />
                       </Button>
                     </div>
 
                     {/* 페이지 정보 */}
-                    <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/20">
-                      <span className="text-sm font-medium text-gray-700">
+                    <div className="neon-box-white px-4 py-2 rounded-full shadow-lg border border-white/20">
+                      <span className="text-sm font-medium neon-text-white">
                         {currentPage} / {pdfPageCount}
                       </span>
                     </div>
@@ -748,9 +748,9 @@ export default function DocSignPage() {
             </div>
 
             {/* 우측: 그룹원(서명자) 목록 */}
-            <div className="bg-white rounded-xl shadow-lg p-6 min-h-[400px] border border-gray-100">
+            <div className="neon-box-white rounded-xl shadow-lg p-6 min-h-[400px] border border-gray-100">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-800">그룹원 목록</h2>
+                <h2 className="text-xl font-bold neon-text-white">그룹원 목록</h2>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-500">총 {signers.length}명</span>
                 </div>
@@ -800,7 +800,7 @@ export default function DocSignPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="group relative bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-300 hover:border-blue-200"
+                        className="group relative neon-box-white bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-300 hover:border-blue-200"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3 flex-1">
@@ -810,7 +810,7 @@ export default function DocSignPage() {
                                 {signer.name.charAt(0).toUpperCase()}
                               </div>
                               {signedStatus[signer.signer_id] && (
-                                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
                                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
@@ -820,8 +820,8 @@ export default function DocSignPage() {
                             
                             {/* 정보 */}
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-gray-800 truncate">{signer.name}</h3>
-                              <p className="text-sm text-gray-500 truncate">{signer.email}</p>
+                              <h3 className="font-semibold neon-text-white-weaker truncate">{signer.name}</h3>
+                              <p className="text-sm neon-text-white-weaker truncate">{signer.email}</p>
                             </div>
                           </div>
                           
@@ -837,9 +837,14 @@ export default function DocSignPage() {
                                 disabled={signedStatus[signer.signer_id]}
                                 className={`relative w-6 h-6 rounded-lg border-2 transition-all duration-300 flex items-center justify-center ${
                                   signedStatus[signer.signer_id]
-                                    ? 'bg-green-500 border-green-500 shadow-lg shadow-green-200'
+                                    ? 'bg-green-500 border-green-500'
                                     : 'bg-white border-gray-300 hover:border-blue-400 hover:shadow-md'
                                 } group-hover:scale-110`}
+                                style={
+                                  signedStatus[signer.signer_id]
+                                    ? { boxShadow: '0 0 20px 8px #22c55e' }
+                                    : undefined
+                                }
                               >
                                 {signedStatus[signer.signer_id] && (
                                   <motion.svg
@@ -888,7 +893,7 @@ export default function DocSignPage() {
       {confirmModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
-            <h2 className="text-lg font-bold mb-4">서명 확정</h2>
+            <h2 className="text-lg font-bold text-black mb-4">서명 확정</h2>
             <p className="mb-6 text-gray-700">서명을 확정하면 다시 취소할 수 없습니다.<br/>진행하시겠습니까?</p>
             <div className="flex justify-end gap-2">
               <button
@@ -898,7 +903,7 @@ export default function DocSignPage() {
                 취소
               </button>
               <button
-                className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                className="px-4 py-2 rounded neon-btn-white"
                 onClick={async () => {
                   if (confirmModal.signerId) {
                     await toggleSignedStatus(confirmModal.signerId);

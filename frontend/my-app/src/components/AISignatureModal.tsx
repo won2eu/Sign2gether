@@ -1,6 +1,5 @@
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
-import axios from '@/lib/axios';
 import { generateSign, GenerateSignResponse } from "@/services/sign";
 import { uploadSignDraw } from "@/services/document";
 
@@ -15,6 +14,7 @@ export default function AISignatureModal({ open, onClose, onSave }: AISignatureM
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
   const [aiSign, setAiSign] = React.useState<string | null>(null);
+  const [inverted, setInverted] = React.useState(false);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -57,9 +57,14 @@ export default function AISignatureModal({ open, onClose, onSave }: AISignatureM
           {error && <div className="text-red-500 text-sm">{error}</div>}
           {aiSign && (
             <div className="flex flex-col items-center gap-2">
-              <img src={aiSign} alt="AI 서명 미리보기" className="border rounded bg-white p-2 max-h-32" />
+              <img
+                src={aiSign}
+                alt="AI 서명 미리보기"
+                className="border brounded bg-white p-0.5 max-h-32"
+                style={{ filter: 'invert(1)', background: 'black' }}
+              />
               <button
-                className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700"
+                className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700"
                 onClick={async () => { 
                   await uploadSignDraw(aiSign);
                   alert('서명이 성공적으로 업로드되었습니다!');
@@ -67,7 +72,7 @@ export default function AISignatureModal({ open, onClose, onSave }: AISignatureM
                   onClose(); 
                 }}
               >
-                이 서명 사용하기
+                서명 저장하기
               </button>
             </div>
           )}

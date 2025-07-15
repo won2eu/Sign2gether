@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState, useRef } from 'react';
-import { getMyDocuments, deleteDocument } from '@/services/document';
+import { getMyDocuments, deleteDocument, getDocumentSigners } from '@/services/document';
 import gsap from 'gsap';
 
 function truncateFileName(name: string, maxLength = 30) {
@@ -13,6 +13,7 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [signerStatus, setSignerStatus] = useState<{ [doc_filename: string]: { total: number, signed: number } }>({});
 
   // 카드 refs
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -98,7 +99,24 @@ export default function DocumentsPage() {
 
   useEffect(() => {
     getMyDocuments()
-      .then(setDocuments)
+      .then(async (docs) => {
+        setDocuments(docs);
+        const statusObj: { [doc_filename: string]: { total: number, signed: number } } = {};
+        await Promise.all(
+          docs.map(async (doc: any) => {
+            try {
+              const signers = await getDocumentSigners(doc.doc_filename);
+              statusObj[doc.doc_filename] = {
+                total: signers.length,
+                signed: signers.filter((s: any) => s.is_signed).length,
+              };
+            } catch {
+              statusObj[doc.doc_filename] = { total: 0, signed: 0 };
+            }
+          })
+        );
+        setSignerStatus(statusObj);
+      })
       .catch(() => setError("로그인이 필요합니다."))
       .finally(() => setLoading(false));
   }, []);
@@ -115,7 +133,7 @@ export default function DocumentsPage() {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="text-white">로딩 중...</div></div>;
+  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="text-white"></div></div>;
   if (error) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="text-white">{error}</div></div>;
 
   const backendUrl = "https://sign2gether-api-production.up.railway.app";
@@ -165,7 +183,22 @@ export default function DocumentsPage() {
                   </a>
                 </div>
                 <div className="text-black text-sm mt-1">업로드: {new Date(doc.uploaded_at).toLocaleString()}</div>
-                <div className="text-black text-xs mt-1">{(doc.file_size/1024).toFixed(1)} KB</div>
+                <div
+                  className={
+                    `text-xs mt-1 ` +
+                    (
+                      signerStatus[doc.doc_filename]
+                        ? (signerStatus[doc.doc_filename].signed === signerStatus[doc.doc_filename].total
+                            ? 'text-blue-700'
+                            : 'text-red-500')
+                        : ''
+                    )
+                  }
+                >
+                  {signerStatus[doc.doc_filename]
+                    ? `${signerStatus[doc.doc_filename].signed}/${signerStatus[doc.doc_filename].total}명 서명완료`
+                    : '서명 정보 불러오는 중...'}
+                </div>
               </div>
               <div className="flex space-x-2">
                 <a href={`${backendUrl}${doc.file_url}`} target="_blank" rel="noopener noreferrer" className="px-5 py-2 bg-black text-white rounded-full hover:bg-blue-700 text-base font-bold">보기</a>
