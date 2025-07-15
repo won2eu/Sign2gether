@@ -88,10 +88,11 @@ export default function FileDropZone() {
       width: 120, // 기본 크기 (더 작게)
       height: 60,
       isDragging: false,
-      isResizing: false
+      isResizing: false,
+      num_page: currentPage // ← 현재 PDF 페이지 번호로 변경
     }
     setSignatures(prev => [...prev, newSignature])
-  }, [signatures.length]) //signatures.length가 변할때마다 함수 재생성 -> useCallback
+  }, [signatures.length, currentPage]) // currentPage도 의존성에 추가
 
   // 서명 이미지 제거 함수
   const removeSignature = useCallback((id: string) => {
