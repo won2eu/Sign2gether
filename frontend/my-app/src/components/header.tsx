@@ -17,11 +17,14 @@ import {
 
 import LoginForm from "./LoginForm"
 import { authService } from '@/services/auth'
+import AISignatureModal from "@/components/AISignatureModal";
 
 export default function Header() {
   const [signsRefreshKey, setSignsRefreshKey] = useState(0);
   // 서명 모달 오픈 상태
   const [signatureOpen, setSignatureOpen] = React.useState(false)
+  // AI 서명 모달 오픈 상태
+  const [aiSignatureOpen, setAiSignatureOpen] = React.useState(false)
   // 서명 이미지 데이터 (base64)
   const [signatureData, setSignatureData] = React.useState<string | null>(null)
   // 로그인 상태
@@ -84,6 +87,20 @@ export default function Header() {
 
         {/* Top Navigation Bar */}
         <nav className="flex items-center space-x-6">
+          {/* AI 서명 생성 링크 - 네비게이션 가장 왼쪽 */}
+          <button
+            type="button"
+            className="text-blue-300 hover:text-blue-500 font-bold whitespace-nowrap mr-30 focus:outline-none"
+            onClick={() => {
+              if (!isLoggedIn) {
+                alert('로그인 해야 사용할 수 있어요!');
+                return;
+              }
+              setAiSignatureOpen(true);
+            }}
+          >
+            AI로 서명을 생성해보세요
+          </button>
           <a href="/" className="text-white hover:text-blue-400 font-medium">
             Home
           </a>
@@ -173,6 +190,16 @@ export default function Header() {
           window.dispatchEvent(new CustomEvent('addSignature', { detail: dataUrl }))
         }}
         onSignSaved={() => setSignsRefreshKey(k => k + 1)}
+      />
+      {/* AI 서명 모달 */}
+      <AISignatureModal
+        open={aiSignatureOpen}
+        onClose={() => setAiSignatureOpen(false)}
+        onSave={(dataUrl) => {
+          setSignatureData(dataUrl);
+          setAiSignatureOpen(false);
+          setSignsRefreshKey(k => k + 1);
+        }}
       />
       {/* 로그인한 사용자의 모든 서명 이미지 썸네일 */}
       <MySignThumbnails refreshKey={signsRefreshKey} />

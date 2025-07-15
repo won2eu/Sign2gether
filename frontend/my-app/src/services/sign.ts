@@ -1,5 +1,10 @@
 import axios from '@/lib/axios';
 
+export interface GenerateSignResponse {
+  message: string;
+  sign_base64: string;
+}
+
 export async function getMySigns() {
   const res = await axios.get('/signs/');
   return res.data;
@@ -15,3 +20,9 @@ export async function insertSignToDocument(doc_filename: string, signer_id: numb
   const res = await axios.post(`/documents/${doc_filename}/sign/${signer_id}`, signs);
   return res.data;
 } 
+
+
+export async function generateSign(name: string): Promise<GenerateSignResponse> {
+  const res = await axios.get<GenerateSignResponse>(`/signs/generate/${name}`);
+  return res.data;
+}
