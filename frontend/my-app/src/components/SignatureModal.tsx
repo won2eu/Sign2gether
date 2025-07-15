@@ -11,6 +11,9 @@ interface SignatureModalProps {
   onClose: () => void
   onSave: (dataUrl: string) => void
   onSignSaved?: () => void
+  sigPadRef?: React.RefObject<any>
+  onStrokeEnd?: () => void
+  sessionId?: string | null
 }
 
 const COLORS = [
@@ -44,8 +47,8 @@ function removeWhiteBgFromDataUrl(dataUrl: string): Promise<string> {
   });
 }
 
-export default function SignatureModal({ open, onClose, onSave, onSignSaved }: SignatureModalProps) {
-  const sigCanvasRef = useRef<SignatureCanvas>(null)
+export default function SignatureModal({ open, onClose, onSave, onSignSaved, sigPadRef, onStrokeEnd, sessionId: propSessionId }: SignatureModalProps) {
+  const sigCanvasRef = sigPadRef ?? useRef<SignatureCanvas>(null)
   const [penColor, setPenColor] = useState(COLORS[0].code)
   const [uploading, setUploading] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
@@ -53,9 +56,13 @@ export default function SignatureModal({ open, onClose, onSave, onSignSaved }: S
 
   useEffect(() => {
     if (open) {
-      setSessionId(uuidv4());
+      if (propSessionId) {
+        setSessionId(propSessionId);
+      } else {
+        setSessionId(uuidv4());
+      }
     }
-  }, [open]);
+  }, [open, propSessionId]);
 
   const mobileUrl = sessionId
     ? `https://sign2gether.vercel.app/mobile_sign?session=${sessionId}`
@@ -94,7 +101,11 @@ export default function SignatureModal({ open, onClose, onSave, onSignSaved }: S
             maxWidth={3}
             backgroundColor="#f9fafb"
             canvasProps={{ width: 600, height: 240, className: "rounded-lg" }}
-            onEnd={() => setHasDrawn(true)}
+            //한 획 그릴때마다
+            onEnd={() => {
+              setHasDrawn(true);
+              if (onStrokeEnd) onStrokeEnd();
+            }}
           />
         </div>
         {/* 버튼 영역 */}
