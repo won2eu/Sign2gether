@@ -58,7 +58,7 @@ export default function SignatureModal({ open, onClose, onSave, onSignSaved }: S
   }, [open]);
 
   const mobileUrl = sessionId
-    ? `https://sign2gether.vercel.app/mobile-sign?session=${sessionId}`
+    ? `https://sign2gether.vercel.app/mobile_sign?session=${sessionId}`
     : "";
 
   if (!open) return null
