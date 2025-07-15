@@ -133,6 +133,24 @@ export default function DocumentsPage() {
     }
   };
 
+  // 파일 다운로드(fetch+blob) 함수
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) throw new Error('다운로드 실패');
+      const blob = await res.blob();
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(link.href);
+    } catch (e) {
+      alert('다운로드에 실패했습니다.');
+    }
+  };
+
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="text-white"></div></div>;
   if (error) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="text-white">{error}</div></div>;
 
@@ -202,7 +220,12 @@ export default function DocumentsPage() {
               </div>
               <div className="flex space-x-2">
                 <a href={`${backendUrl}${doc.file_url}`} target="_blank" rel="noopener noreferrer" className="px-5 py-2 bg-black text-white rounded-full hover:bg-blue-700 text-base font-bold">보기</a>
-                <a href={`${backendUrl}${doc.file_url}`} download className="px-5 py-2 bg-black text-white rounded-full hover:bg-green-700 text-base font-bold">다운로드</a>
+                <button
+                  onClick={() => handleDownload(`${backendUrl}${doc.file_url}`, doc.original_filename)}
+                  className="px-5 py-2 bg-black text-white rounded-full hover:bg-green-700 text-base font-bold"
+                >
+                  다운로드
+                </button>
                 <button
                   onClick={() => handleDelete(doc.doc_filename)}
                   disabled={deleting === doc.doc_filename}
