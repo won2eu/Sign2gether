@@ -62,6 +62,18 @@ export default function MobileSignInner() {
       }}
       sigPadRef={sigPadRef}
       onStrokeEnd={handleStrokeEnd}
+      hideCancel={true}
+      hideSave={true}
+      hideMake={true}
+      hideQrCode={true}
+      onClear={() => {
+        if (socketRef.current && socketRef.current.readyState === 1) {
+          socketRef.current.send(JSON.stringify({
+            type: "clear",
+            sessionId,
+          }));
+        }
+      }}
     />
   );
 } 

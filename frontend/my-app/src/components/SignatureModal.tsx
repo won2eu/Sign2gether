@@ -14,6 +14,11 @@ interface SignatureModalProps {
   sigPadRef?: React.RefObject<any>
   onStrokeEnd?: () => void
   sessionId?: string | null
+  hideCancel?: boolean
+  hideSave?: boolean
+  hideMake?: boolean
+  hideQrCode?: boolean
+  onClear?: () => void;
 }
 
 const COLORS = [
@@ -47,7 +52,7 @@ function removeWhiteBgFromDataUrl(dataUrl: string): Promise<string> {
   });
 }
 
-export default function SignatureModal({ open, onClose, onSave, onSignSaved, sigPadRef, onStrokeEnd, sessionId: propSessionId }: SignatureModalProps) {
+export default function SignatureModal({ open, onClose, onSave, onSignSaved, sigPadRef, onStrokeEnd, sessionId: propSessionId, hideCancel, hideSave, hideMake, hideQrCode, onClear }: SignatureModalProps) {
   const sigCanvasRef = sigPadRef ?? useRef<SignatureCanvas>(null)
   const [penColor, setPenColor] = useState(COLORS[0].code)
   const [uploading, setUploading] = useState(false);
@@ -78,6 +83,9 @@ export default function SignatureModal({ open, onClose, onSave, onSignSaved, sig
         if (msg.type === "stroke" && sigCanvasRef.current) {
           sigCanvasRef.current.fromData(msg.strokes);
         }
+        if (msg.type === "clear" && sigCanvasRef.current) {
+          sigCanvasRef.current.clear();
+        }
       } catch (e) {
         console.error("[SignatureModal] WebSocket 메시지 파싱 에러:", e, event.data);
       }
@@ -100,7 +108,7 @@ export default function SignatureModal({ open, onClose, onSave, onSignSaved, sig
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-10 relative">
         <h2 className="text-lg font-semibold mb-4">서명 만들기</h2>
         {/* QR코드 영역 */}
-        {sessionId && (
+        {sessionId && !hideQrCode && (
           <div className="flex flex-col items-center mb-4">
             <div className="mb-2 text-sm text-gray-500">모바일에서 QR코드를 스캔해 서명하세요</div>
             <QRCode value={mobileUrl} size={128} />
@@ -144,49 +152,56 @@ export default function SignatureModal({ open, onClose, onSave, onSignSaved, sig
               onClick={() => {
                 sigCanvasRef.current?.clear();
                 setHasDrawn(false);
+                if (onClear) onClear();
               }}
             >
               지우기
             </Button>
-            <Button variant="outline" size="sm" onClick={onClose}>
-              취소
-            </Button>
+            {!hideCancel && (
+              <Button variant="outline" size="sm" onClick={onClose}>
+                취소
+              </Button>
+            )}
+            {!hideSave && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={uploading || !hasDrawn}
+                onClick={async () => {
+                  if (sigCanvasRef.current && !sigCanvasRef.current.isEmpty()) {
+                    setUploading(true);
+                    const rawDataUrl = sigCanvasRef.current.getCanvas().toDataURL("image/png");
+                    try {
+                      await uploadSignDraw(rawDataUrl);
+                      alert('서명이 성공적으로 업로드되었습니다!');
+                      if (typeof onSignSaved === 'function') onSignSaved();
+                    } catch {
+                      alert('서명 업로드에 실패했습니다.');
+                    } finally {
+                      setUploading(false);
+                    }
+                  }
+                }}
+              >
+                {uploading ? '저장 중...' : '사인 저장'}
+              </Button>
+            )}
+          </div>
+          {!hideMake && (
             <Button
-              variant="outline"
               size="sm"
-              disabled={uploading || !hasDrawn}
+              className="bg-blue-600 text-white hover:bg-blue-700"
               onClick={async () => {
                 if (sigCanvasRef.current && !sigCanvasRef.current.isEmpty()) {
-                  setUploading(true);
                   const rawDataUrl = sigCanvasRef.current.getCanvas().toDataURL("image/png");
-                  try {
-                    await uploadSignDraw(rawDataUrl);
-                    alert('서명이 성공적으로 업로드되었습니다!');
-                    if (typeof onSignSaved === 'function') onSignSaved();
-                  } catch {
-                    alert('서명 업로드에 실패했습니다.');
-                  } finally {
-                    setUploading(false);
-                  }
+                  const transparentDataUrl = await removeWhiteBgFromDataUrl(rawDataUrl);
+                  onSave(transparentDataUrl);
                 }
               }}
             >
-              {uploading ? '저장 중...' : '사인 저장'}
+              만들기
             </Button>
-          </div>
-          <Button
-            size="sm"
-            className="bg-blue-600 text-white hover:bg-blue-700"
-            onClick={async () => {
-              if (sigCanvasRef.current && !sigCanvasRef.current.isEmpty()) {
-                const rawDataUrl = sigCanvasRef.current.getCanvas().toDataURL("image/png");
-                const transparentDataUrl = await removeWhiteBgFromDataUrl(rawDataUrl);
-                onSave(transparentDataUrl);
-              }
-            }}
-          >
-            만들기
-          </Button>
+          )}
         </div>
         {/* 닫기 버튼 */}
         <button
