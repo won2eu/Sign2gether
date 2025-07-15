@@ -601,7 +601,9 @@ export default function DocSignPage() {
                         />
                         
                         {/* 서명 이미지 오버레이 */}
-                        {signatures.map(signature => (
+                        {signatures
+                          .filter(signature => signature.num_page === currentPage)
+                          .map(signature => (
                           <div
                             key={signature.id}
                             className={`absolute cursor-move border-2 transition-all duration-200 group ${
