@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File,Form, HTTPException, Depends, Body
+from fastapi import APIRouter, UploadFile, File,Form, HTTPException, Depends, Body, BackgroundTasks
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -11,6 +11,18 @@ from app.dependencies.database import get_db
 from app.models import Document, Sign, DocumentSigner
 from app.routers.auth import get_current_user_from_cookie
 import json
+from dotenv import load_dotenv
+from email.mime.multipart import MIMEMultipart
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+import re
+
+def is_valid_email(email: str) -> bool:
+    # 간단한 이메일 정규식 (RFC 완벽 대응은 아님, 실무에서 충분)
+    pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    return re.match(pattern, email) is not None
+
 router = APIRouter(prefix="/upload", tags=["upload"])
 
 # 업로드 디렉토리 설정
@@ -18,10 +30,88 @@ UPLOAD_DIR = "resources"
 DOC_DIR = os.path.join(UPLOAD_DIR, "docs")
 SIGN_DIR = os.path.join(UPLOAD_DIR, "signs")
 
+load_dotenv()
+gmail_user = str(os.getenv("GMAIL_USER"))
+gmail_password = str(os.getenv("GMAIL_PASSWORD"))
 
 # 디렉토리가 없으면 생성
 os.makedirs(DOC_DIR, exist_ok=True)
 os.makedirs(SIGN_DIR, exist_ok=True)
+
+def send_email_to_signers(emails, names, filename, url):
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(gmail_user, gmail_password)
+    for email, name in zip(emails, names):
+        body = f"안녕하세요, {name}님.<br>문서명: {filename}<br>서명을 요청합니다.<br><a href='{url}'>서명하러 가기</a>"
+        msg = MIMEMultipart('related')
+        msg['From'] = str(gmail_user)
+        msg['To'] = email
+        msg['Subject'] = f"sign2gether에서 함께 서명하세요. 문서명: {filename}"
+        #msg_html = MIMEText(f'<html><body><img src="cid:image1"><br>{body}</body></html>', 'html')
+        msg_html = MIMEText(f'''
+        <html>
+        <body style="background:#f9fafb; margin:0; padding:0;">            
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f9fafb;">
+            <tr>
+                <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#fff; border-radius:12px; box-shadow:0 2px 8px #eee; padding:0 0 32px 0;">
+                    <tr>
+                    <td align="center" style="padding-top:0px; padding-bottom:24px;">
+                        <img src="cid:image1" 
+                            style="width:100%; max-width:600px; display:block; margin:0" 
+                            alt="Sign2gether" />
+                    </td>
+                    </tr>
+                    <tr>
+                    <td align="center" style="font-size:15px; color:#444; font-weight:700; padding-bottom:24px;">
+                        Sign2gether 서명 요청
+                    </td>
+                    </tr>
+                    <tr>
+                    <td style="font-size:12px; color:#444; font-weight:600; padding:0 32px 0 32px;">
+                        안녕하세요, <b>{name}님</b>.
+                    </td>
+                    </tr>
+                    <tr>
+                    <td style="font-size:12px; color:#444; font-weight:600; padding:16px 32px 0 32px;">
+                        문서명: <span style="font-weight:bold;">{filename}</span>
+                    </td>
+                    </tr>
+                    <tr>
+                    <td style="font-size:12px; color:#444; padding:16px 32px 0 32px;">
+                        아래 버튼을 눌러 서명에 참여해 주세요!
+                    </td>
+                    </tr>
+                    <tr>
+                    <td align="center" style="padding:40px 0 0 0;">
+                        <a href="{url}" style="background:#2979ff; color:#fff; text-decoration:none; padding:18px 48px; border-radius:8px; font-size:12px; font-weight:bold; display:inline-block;">
+                        서명하러 가기
+                        </a>
+                    </td>
+                    </tr>
+                    <tr>
+                    <td align="center" style="font-size:8px; color:#bbb; padding-top:20px;">
+                        본 메일은 Sign2gether에서 자동 발송되었습니다.
+                    </td>
+                    </tr>
+                </table>
+                </td>
+            </tr>
+            </table>
+        </body>
+        </html>
+        ''', 'html')
+        msg.attach(msg_html)
+
+        # 이미지 파일 읽기 및 추가
+        with open("app/email_header.png", 'rb') as img:
+            msg_image = MIMEImage(img.read(), name="email_header.png")
+        msg_image.add_header('Content-ID', '<image1>')
+        msg.attach(msg_image)
+        #msg.attach(MIMEText(f"안녕하세요, {name}님.\n\n서명을 요청합니다.\n\n감사합니다.\n\n{url}", 'plain'))
+        server.send_message(msg)
+    server.quit()
 
 @router.post("/docs/pdf",responses={
     200:{
@@ -62,6 +152,7 @@ os.makedirs(SIGN_DIR, exist_ok=True)
         }
 })
 async def upload_pdf(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     signers: Optional[str] = Form(None,description="JSON 형식의 구성원 정보",examples=['[{"name":"홍길동","email":"hong@example.com","role":"대표"},{"name":"김철수","email":"kim@example.com","role":"부장"}]']),
     current_user: dict = Depends(get_current_user_from_cookie),
@@ -111,7 +202,6 @@ async def upload_pdf(
         db.add(document)
         await db.commit()
         await db.refresh(document)
-
         if signers:
             signers_data = json.loads(signers)
             for signer in signers_data:
@@ -123,8 +213,17 @@ async def upload_pdf(
                     is_signed=False
                 )
                 db.add(document_signer)
+            names=[]
+            emails=[]
+            for signer in signers_data:
+                if signer["email"] and is_valid_email(signer["email"]):
+                    names.append(signer["name"])
+                    emails.append(signer["email"])
+            # 이메일 전송을 백그라운드로 등록
+            if names and emails:
+                background_tasks.add_task(send_email_to_signers, emails, names, file.filename, "https://sign2gether.vercel.app/"+stored_filename)
             await db.commit()
-            await db.refresh(document_signer)
+            await db.refresh(document_signer)   
         
         
         # 응답 데이터
