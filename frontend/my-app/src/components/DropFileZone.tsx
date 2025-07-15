@@ -101,18 +101,16 @@ export default function FileDropZone() {
 
   // 서명 구성원 추가 함수
   const addSignerMember = useCallback(() => {
-    if (!newMemberName.trim() || !newMemberEmail.trim() || !newMemberRole.trim()) {
+    if (!newMemberName.trim()) {
       return
     }
-    
     const newMember: SignerMember = {
       id: `member-${Date.now()}`,
       name: newMemberName.trim(),
-      email: newMemberEmail.trim(),
-      role: newMemberRole.trim(),
+      email: newMemberEmail.trim(), // 빈 값도 허용
+      role: newMemberRole.trim(),   // 빈 값도 허용
       status: 'pending'
     }
-    
     setSignerMembers(prev => [...prev, newMember])
     setNewMemberName('')
     setNewMemberEmail('')
