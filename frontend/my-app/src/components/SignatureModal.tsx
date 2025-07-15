@@ -1,10 +1,10 @@
-import React, { useRef, useState } from "react"
+import React, { useRef, useState, useEffect } from "react"
 import SignatureCanvas from "react-signature-canvas"
 import { Button } from "@/components/ui/button"
 import { uploadSignDraw } from '@/services/document';
 import QRCode from "react-qr-code";
 import { v4 as uuidv4 } from "uuid";
-import { useEffect } from "react";
+
 
 interface SignatureModalProps {
   open: boolean
@@ -53,6 +53,7 @@ export default function SignatureModal({ open, onClose, onSave, onSignSaved, sig
   const [uploading, setUploading] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -63,6 +64,30 @@ export default function SignatureModal({ open, onClose, onSave, onSignSaved, sig
       }
     }
   }, [open, propSessionId]);
+
+  useEffect(() => {
+    if (!open || !sessionId) return;
+
+    const wsUrl = `wss://sign2gether-api-production.up.railway.app/signs/ws?sessionId=${sessionId}`;
+    const ws = new WebSocket(wsUrl);
+    setSocket(ws);
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === "stroke" && sigCanvasRef.current) {
+          sigCanvasRef.current.fromData(msg.strokes);
+        }
+      } catch (e) {
+        console.error("[SignatureModal] WebSocket 메시지 파싱 에러:", e, event.data);
+      }
+    };
+
+    return () => {
+      ws.close();
+      setSocket(null);
+    };
+  }, [open, sessionId]);
 
   const mobileUrl = sessionId
     ? `https://sign2gether.vercel.app/mobile_sign?session=${sessionId}`
@@ -93,21 +118,23 @@ export default function SignatureModal({ open, onClose, onSave, onSignSaved, sig
           ))}
         </div>
         {/* 서명 그리기 영역 */}
-        <div className="bg-gray-50 border rounded-lg flex items-center justify-center mb-4" style={{ height: 260 }}>
-          <SignatureCanvas
-            ref={sigCanvasRef}
-            penColor={penColor}
-            minWidth={3}
-            maxWidth={3}
-            backgroundColor="#f9fafb"
-            canvasProps={{ width: 600, height: 240, className: "rounded-lg" }}
-            //한 획 그릴때마다
-            onEnd={() => {
-              setHasDrawn(true);
-              if (onStrokeEnd) onStrokeEnd();
-            }}
-          />
-        </div>
+        
+          <div className="bg-gray-50 border rounded-lg flex items-center justify-center mb-4" style={{ height: 260 }}>
+            <SignatureCanvas
+              ref={sigCanvasRef}
+              penColor={penColor}
+              minWidth={3}
+              maxWidth={3}
+              backgroundColor="#f9fafb"
+              canvasProps={{ width: 600, height: 240, className: "rounded-lg" }}
+              //한 획 그릴때마다
+              onEnd={() => {
+                setHasDrawn(true);
+                if (onStrokeEnd) onStrokeEnd();
+              }}
+            />
+          </div>
+
         {/* 버튼 영역 */}
         <div className="flex justify-between items-center mt-2">
           <div className="space-x-2">
