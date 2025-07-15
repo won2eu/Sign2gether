@@ -1083,6 +1083,19 @@ export default function FileDropZone() {
                           >
                             복사
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                            onClick={() => {
+                              if (shareUrl) {
+                                window.open(shareUrl, "_blank");
+                              }
+                            }}
+                          >
+                            이동
+                          </Button>
+                          
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
                           이 URL을 구성원들에게 공유하여 서명을 요청할 수 있습니다.
