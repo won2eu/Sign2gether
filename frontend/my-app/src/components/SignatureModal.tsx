@@ -2,6 +2,9 @@ import React, { useRef, useState } from "react"
 import SignatureCanvas from "react-signature-canvas"
 import { Button } from "@/components/ui/button"
 import { uploadSignDraw } from '@/services/document';
+import QRCode from "react-qr-code";
+import { v4 as uuidv4 } from "uuid";
+import { useEffect } from "react";
 
 interface SignatureModalProps {
   open: boolean
@@ -46,6 +49,17 @@ export default function SignatureModal({ open, onClose, onSave, onSignSaved }: S
   const [penColor, setPenColor] = useState(COLORS[0].code)
   const [uploading, setUploading] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setSessionId(uuidv4());
+    }
+  }, [open]);
+
+  const mobileUrl = sessionId
+    ? `https://sign2gether.vercel.app/mobile-sign?session=${sessionId}`
+    : "";
 
   if (!open) return null
 
@@ -53,7 +67,14 @@ export default function SignatureModal({ open, onClose, onSave, onSignSaved }: S
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-10 relative">
         <h2 className="text-lg font-semibold mb-4">서명 만들기</h2>
-        {/* 색상 선택 */}   
+        {/* QR코드 영역 */}
+        {sessionId && (
+          <div className="flex flex-col items-center mb-4">
+            <div className="mb-2 text-sm text-gray-500">모바일에서 QR코드를 스캔해 서명하세요</div>
+            <QRCode value={mobileUrl} size={128} />
+          </div>
+        )}
+        {/* 색상 선택 */}
         <div className="flex items-center space-x-4 mb-4">
           {COLORS.map((color) => (
             <button

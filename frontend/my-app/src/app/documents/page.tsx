@@ -192,7 +192,7 @@ export default function DocumentsPage() {
               <div>
                 <div className="text-black font-medium text-lg">
                   <a
-                    href={`https://sign2gether.vercel.app/${doc.doc_filename}`}
+                    href={`https://sign2gether.vercel.app/document/${doc.doc_filename}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:underline"
