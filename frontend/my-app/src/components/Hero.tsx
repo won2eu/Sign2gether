@@ -48,7 +48,7 @@ export default function Hero() {
     let lastY = 0
     let isFirstMove = true
     const points: { x: number; y: number; timestamp: number }[] = []
-    const maxPoints = 30
+    const maxPoints = 70
 
     // Canvas 스타일 설정
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'
@@ -124,7 +124,7 @@ export default function Hero() {
           
           for (let i = 1; i < points.length; i++) {
             const point = points[i]
-            const alpha = (i / points.length) * 0.8 // 투명도 점진적 감소
+            const alpha = (i / points.length) * 0.9 // 투명도 점진적 감소
             ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`
             ctx.lineTo(point.x, point.y)
           }
@@ -134,7 +134,7 @@ export default function Hero() {
     }
 
     // 주기적으로 페이드 아웃 실행
-    const fadeInterval = setInterval(fadeOutAnimation, 50)
+    const fadeInterval = setInterval(fadeOutAnimation, 40)
 
     return () => {
       window.removeEventListener('resize', resizeCanvas)
