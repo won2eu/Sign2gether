@@ -104,9 +104,7 @@ export default function Header() {
       <header className="flex items-center justify-between px-6 py-4 border-b border-white">
         {/* 로고 */}
         <a href="/" className="flex items-center">
-          <div className="w-6 h-6 bg-white rounded-sm mr-3 flex items-center justify-center">
-            <div className="w-3 h-3 bg-black rounded-sm transform rotate-45"></div>
-          </div>
+          <img src="/sign2gether.png" alt="Sign2gether 로고" className="w-8 h-8 mr-2" />
           <span className="text-xl font-semibold text-white">Sign2gether</span>
         </a>
 

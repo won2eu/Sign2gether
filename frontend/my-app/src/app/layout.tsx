@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Sign2gether",
   description: "Signature maker",
+  icons: {
+    icon: "/sign2gether.png",
+  },
 };
 
 export default function RootLayout({
