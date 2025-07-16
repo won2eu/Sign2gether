@@ -128,7 +128,11 @@ https://github.com/user-attachments/assets/2a5bd125-c2cf-434f-85f5-ab1eba637951
 
 ## 🤖 Make Signature Using AI
 
-[화면 기록 2025-07-16 오후 3.42.44.mov](attachment:85b80bb0-9d2a-484d-9440-f79a39abc20c:화면_기록_2025-07-16_오후_3.42.44.mov)
+
+
+https://github.com/user-attachments/assets/921aca08-bcb5-4405-b36d-c96cb4aee34d
+
+
 
 - **Gemini AI를 활용해 서명을 자동으로 생성해주는 기능이다.**
     
@@ -137,20 +141,24 @@ https://github.com/user-attachments/assets/2a5bd125-c2cf-434f-85f5-ab1eba637951
 
 ## 👥 Make a Group
 
-[화면 기록 2025-07-16 오후 3.28.51.mov](attachment:47291ca0-cd8e-4ea0-9b7d-efa39a4bcf44:화면_기록_2025-07-16_오후_3.28.51.mov)
+
+https://github.com/user-attachments/assets/1c9db1c7-e9ce-4103-aba5-c7266967e9fd
+
 
 - **PDF, JPG, PNG 파일을 업로드할 수 있으며, 구성원의 이름, 이메일, 역할 정보를 입력하여 그룹원을 추가할 수 있다. 모든 구성원을 추가한 후 ‘확정하기’ 버튼을 누르면 그룹 서명 문서가 생성되며, 공유 가능한 URL도 함께 제공된다.**
     
     해당 URL을 통해 그룹원들이 문서에 접근할 수 있으며, 로그인하지 않아도 서명이 가능하다. 또한, 입력된 이메일 주소로 서명 요청 메일이 자동으로 전송된다.
     
 
-![스크린샷 2025-07-16 오후 4.57.16.png](attachment:45ee4791-f78f-45ed-8bd6-6a8a251260b8:스크린샷_2025-07-16_오후_4.57.16.png)
+<img width="602" height="401" alt="스크린샷 2025-07-16 오후 4 57 16" src="https://github.com/user-attachments/assets/52ad5b68-3398-4055-9678-79c421501449" />
 
                                                                      (실제 이메일 요청 양식)
 
 ## 📄My Documents
 
-[화면 기록 2025-07-16 오후 7.05.23.mov](attachment:9971b5a1-e28e-4391-aa98-28d46920b512:화면_기록_2025-07-16_오후_7.05.23.mov)
+
+https://github.com/user-attachments/assets/e8761e64-40a7-4464-9b4a-1f30ab44b3b4
+
 
 내가 속한 모든 그룹 문서들을 조회할 수 있다.
 그룹 마다 몇명이 사인했는지 확인할 수 있고 서명이 완료된 PDF는 조회 및 다운로드가 가능하다!
@@ -159,14 +167,25 @@ https://github.com/user-attachments/assets/2a5bd125-c2cf-434f-85f5-ab1eba637951
 
 ## 🖊️Group Signature & Insert Signature
 
-[화면 기록 2025-07-16 오후 4.04.52.mov](attachment:6675cfc2-16e0-4745-83e3-8364e4fa8e3c:화면_기록_2025-07-16_오후_4.04.52.mov)
+
+https://github.com/user-attachments/assets/745cd270-3038-4f54-87f5-18e17755afc9
+
+
 
 - **공유 URL에 접속하면 ‘Signature’ 버튼을 통해 바로 서명을 추가할 수 있으며, 저장된 커스텀 사인을 클릭하여 손쉽게 삽입할 수 있다.**
     
     추가된 서명은 자유롭게 드래그하여 위치를 조정할 수 있고, 문서의 확대/축소 및 패닝 기능도 지원된다.
     
     서명이 완료된 후에는 체크박스를 선택하여 문서에 서명을 최종적으로 병합할 수 있다.
-    
+
+# QR 코드를 이용한 Signature 추가
+
+
+<img width="663" height="641" alt="image (2)" src="https://github.com/user-attachments/assets/3cd88163-8ad4-4e99-a6ad-813b2c90c8e0" />
+
+- QR코드를 통해 모바일 폰으로 접속하면 사인 모달이 뜬다.
+- 모바일 폰에서 서명하면 실시간으로 웹에서 반영이 된다.
+
 
 ---
 
